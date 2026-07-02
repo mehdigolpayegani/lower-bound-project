@@ -75,6 +75,57 @@
 
 \maketitle
 
+\paragraph{The \EHL judgment.}
+Let $\Mem$ denote the set of program memories and let
+$\mathrm{Exp} = \Mem \to \Real^{+}$ be the set of
+non-negative extended-real expectations.
+For predicates $\pred, \predtwo : \Mem \to \Bool$,
+expectations $\ex, \extwo \in \mathrm{Exp}$, and a program $\cmd$,
+the \EHL judgment
+\[
+  \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
+  \qquad {\rel} \in \{{\leq},{\geq}\}
+\]
+is defined by:
+\begin{align}
+  \HT[lower]{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
+    &\;\;\defsym\;\;
+    \forall \mem \in \Mem.\;\;
+    \pred(\mem) \implies \ex(\mem) \;\leq\; \E{\cmd,\mem}{[\predtwo] \cdot \extwo}
+    \label{eq:lower-sem}
+    \\[4pt]
+  \HT[upper]{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
+    &\;\;\defsym\;\;
+    \forall \mem \in \Mem.\;\;
+    \pred(\mem) \implies \ex(\mem) \;\geq\; \E{\cmd,\mem}{[\predtwo] \cdot \extwo}
+    \label{eq:upper-sem}
+\end{align}
+where $\E{\cmd,\mem}{[\predtwo]\cdot\extwo}$ denotes the expected value of
+$[\predtwo]\cdot\extwo$ over the output distribution of $\cmd$ starting from
+memory $\mem$, or equivalently $\mathcolor{violet}{\WP{\cmd}{[\predtwo]\cdot\extwo}(\mem)}$.
+In both cases, the precondition $\pred$ restricts the obligation to
+memories where $\pred$ holds; at memories where $\pred$ is false the
+judgment is vacuously satisfied.
+
+
+\paragraph{Validity.}
+Let $\cmd_\mem$ denote the output distribution of $\cmd$ from memory $\mem$.
+A judgment $\valid \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}$ is \emph{valid}
+if both of the following hold:
+\begin{enumerate}
+  \item $\forall\mem \in \Mem . \pred(\mem) \implies \supp(\cmd_\mem) \subseteq \predtwo$
+  \item $\forall\mem \in \Mem . \pred(\mem) \implies \ex(\mem) \;\HTrel\; \E{\cmd,\mem}{\extwo}$
+\end{enumerate}
+Condition~(1) requires that all output memories satisfy the postcondition
+$\predtwo$. Condition~(2) requires that $\ex(\mem)$ bounds the expected
+value of $\extwo$ under the output distribution of $\cmd$.
+% Together, since $\supp(\cmd_\mem) \subseteq \predtwo$ implies
+% $\E{\cmd,\mem}{\extwo} = \E{\cmd,\mem}{[\predtwo]\cdot\extwo}$,
+% the two conditions are jointly equivalent to:
+% \[
+%   [\pred]\cdot\ex \;\HTrel\; \WP{\cmd}{[\predtwo]\cdot\extwo}
+% \]
+
 \begin{figure}[H]
     \[
       \begin{array}{cc}
@@ -115,6 +166,38 @@
   \caption{\EHL for lower and upper-bounds. Here ${\rel} \in \{{\leq},{\geq}\}$.}\label{fig:hoare:l-u}
 \end{figure}
 
+\paragraph{Notation.}
+For a predicate $\pred : \Mem \to \Bool$ we use two indicator-style operators, one tailored to
+each direction of reasoning:
+\[
+  [\pred](\mem) \;=\;
+  \begin{cases} 1 & \text{if } \pred(\mem) \\ 0 & \text{otherwise} \end{cases}
+  \qquad\text{(used for lower bounds)}
+  \\[3mm]
+\]
+\[
+  \langle \pred \rangle(\mem) \;=\;
+  \begin{cases} 1 & \text{if } \pred(\mem) \\ \infty & \text{otherwise} \end{cases}
+  \qquad\text{(used for upper bounds)}
+  \\[3mm]
+\]
+% Given a memory-indexed expectation $r : \Mem \to \Real^{+}$,
+% the expressions $[\pred] \cdot r$ and $\langle \pred \rangle \cdot r$ denote
+% the corresponding pointwise products over $\Mem$:
+% $[\pred] \cdot r$ agrees with $r$ on memories satisfying $\pred$ and is zero
+% elsewhere, while $\langle \pred \rangle \cdot r$ agrees with $r$ on memories
+% satisfying $\pred$ and is $\infty$ elsewhere.
+
+\paragraph{The witness sequence $\{r_i\}_{i \in \mathbb{N}}$.}
+The rule of \Cref{fig:hoare:while-lb} uses a sequence $\{r_i\}_{i \geq 0}$ of
+non-negative expectations as a termination witness: intuitively, $r_i$ is a
+(user-chosen) upper bound on how much of the post-expectation mass of $\ex$ is
+still trapped inside the loop after $i$ body executions. Premise~2 ties $r_i$
+to $\ex$ at $i=0$ by requiring $r_0 \geq \ex$; Premise~3 propagates the bound
+across one iteration of the body; and Premise~4 forces the bound --- and thus
+the trapped mass --- to vanish in the limit.
+
+
 \begin{figure}[H]
   \small
     \[
@@ -123,7 +206,7 @@
       {
         \HT[lower]{\bexpr\land\pred}{\ex}{\cmd}{\pred}{\ex}
         & \bexpr \land \pred \valid r_0 \geq \ex
-        & \forall i \geq 0.\, \HT[upper]{\bexpr\land\pred}{r_{i+1}}{\cmd}{\top}{[\pred]\cdot r_i}
+        & \forall i \geq 0.\, \HT[upper]{\bexpr\land\pred}{r_{i+1}}{\cmd}{\top}{r_i}
         & \bexpr \land \pred \valid \lim_{i \to \infty} r_i = 0
       }
     \]
@@ -135,36 +218,6 @@
   \mathbb{R}^+$.}\label{fig:hoare:while-lb}
 \end{figure}
 
-
-\paragraph{Notation.}
-For a predicate $\pred$ we use two indicator-style operators, one tailored to
-each direction of reasoning:
-\[
-  [\pred] \;=\;
-  \begin{cases} 1 & \text{if } \pred \\ 0 & \text{otherwise} \end{cases}
-  \qquad\text{(used for lower bounds)}
-  \\[3mm]
-\]
-\[
-  \langle \pred \rangle \;=\;
-  \begin{cases} 1 & \text{if } \pred \\ \infty & \text{otherwise} \end{cases}
-  \qquad\text{(used for upper bounds)}
-  \\[3mm]
-\]
-Given a (state-indexed) expectation $r$, the expressions $[\pred] \cdot r$ and
-$\langle \pred \rangle \cdot r$ denote the corresponding pointwise products:
-$[\pred] \cdot r$ agrees with $r$ on states satisfying $\pred$ and is zero
-elsewhere, while $\langle \pred \rangle \cdot r$ agrees with $r$ on states
-satisfying $\pred$ and is $\infty$ elsewhere.
-
-\paragraph{The witness sequence $\{r_i\}_{i \in \mathbb{N}}$.}
-The rule of \Cref{fig:hoare:while-lb} uses a sequence $\{r_i\}_{i \geq 0}$ of
-non-negative expectations as a termination witness: intuitively, $r_i$ is a
-(user-chosen) upper bound on how much of the post-expectation mass of $\ex$ is
-still trapped inside the loop after $i$ body executions. Premise~2 ties $r_i$
-to $\ex$ at $i=0$ by requiring $r_0 \geq \ex$; Premise~3 propagates the bound
-across one iteration of the body; and Premise~4 forces the bound --- and thus
-the trapped mass --- to vanish in the limit.
 
 \newpage
 
@@ -355,13 +408,13 @@ which is exactly the desired conclusion. \qed
 
 \noindent\makebox[\linewidth]{\rule{\textwidth}{0.4pt}}
 % ======================================================================
-\section{Relative Completeness}\label{app:relative-completeness}
+\section{Completeness}\label{app:completeness}
 % ======================================================================
 
-\paragraph{Theorem: Relative Completeness.}
+\paragraph{Theorem: Completeness.}
 \vspace{3mm}
 
-\noindent\textbf{Assumptions:}
+\textbf{Assumptions:}
 \begin{align*}
   1. \quad & [\pred] \cdot \ex \;\leq\; \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex} \\
   2. \quad & [\bexpr\land\pred] \cdot \ex \;\leq\; \WP{\cmd}{[\pred] \cdot \ex}
@@ -377,19 +430,11 @@ which is exactly the desired conclusion. \qed
 
 \noindent\textbf{Verification of Premise 2:}
 \begin{align*}
-  \bexpr \wedge \pred &\implies I_0 = 0 \\
-  r_0 &= H - I_0 = H \\
-  \text{From (1): } H &\geq [\pred] \cdot \ex \implies H \geq \ex \\
-  \quad [\bexpr\land\pred] \cdot r_0 &\geq [\bexpr\land\pred] \cdot \ex
-\end{align*}
-
-$$\begin{aligned}
-& \textbf{Verification of Premise 2:} \\
 & \bexpr \wedge \pred \implies I_0 = 0 \\
 & r_0 = H - I_0 = H \\
 & \text{P holds so: } H \ge [\pred] \cdot \ex \implies H \ge \ex \\
 & [\bexpr \wedge \pred] \cdot r_0 \ge [\bexpr \wedge \pred] \cdot \ex
-\end{aligned}$$
+\end{align*}
 
 \noindent\textbf{Verification of Premise 3:}
 \begin{align*}
@@ -411,5 +456,238 @@ $$\begin{aligned}
 
 \input{derived-rules.tex}
 
+
+\noindent\makebox[\linewidth]{\rule{\textwidth}{0.4pt}}
+% ======================================================================
+% \section{Completeness}\label{app:completeness}
+% % ======================================================================
+
+% \paragraph{Goal.}
+% For every command $C$ and expectations $g, f$:
+% \[
+%   \models \HT[lower]{}{g}{C}{}{f}
+%   \;\implies\;
+%   \vdash \HT[lower]{}{g}{C}{}{f}
+% \]
+
+% \paragraph{Strategy (Cook-style).} The proof uses two lemmas:
+% \[
+%   \textbf{(L1)}\ \vdash \HT[lower]{}{\WP{C}{f}}{C}{}{f}
+%   \qquad\qquad
+%   \textbf{(L2)}\ \models \HT[lower]{}{g}{C}{}{f} \;\implies\; \vdash \HT[lower]{}{g}{C}{}{f}
+% \]
+% (L2) is a single Weaken step given (L1).  The substance is in (L1), proved by structural induction on $C$.  The non-while cases are routine; we give the while case.
+
+% % ----------------------------------------------------------------------
+% \subsection*{Lemma (L1), while case: $C = \WHILE\bexpr\DO\cmd$}
+
+% \noindent\textbf{Definitions.}
+% \[
+%   W \defsym \WP{\WHILE\bexpr\DO\cmd}{f}, \qquad
+%   F(X) \defsym [\bexpr]\cdot\WP{\cmd}{X} + [\neg\bexpr]\cdot f, \qquad
+%   r_i \defsym W - F^i(0).
+% \]
+
+% % \noindent Two facts follow immediately.
+% % \begin{itemize}
+% %   \item \emph{Fixpoint:} $W = F(W)$, hence $\WP{\cmd}{W} = W$ on $\bexpr$ and $W = f$ on $\neg\bexpr$.
+% %   \item \emph{Kleene:} $F^i(0) \uparrow W$ pointwise, hence $r_i \downarrow 0$ and $r_0 = W$.
+% % \end{itemize}
+
+% \medskip
+% \noindent\textbf{Derivation.}
+% \[
+% \infer[\rllabelstyle{Weaken-post}]{%
+%   \vdash \HT[lower]{}{W}{\WHILE\bexpr\DO\cmd}{}{f}%
+% }{%
+%   \infer[\rllabelstyle{While-lb}]{%
+%     \vdash \HT[lower]{}{W}{\WHILE\bexpr\DO\cmd}{\neg\bexpr}{W}%
+%   }{%
+%     \infer[\rllabelstyle{Weaken-pre}]{%
+%       \vdash \HT[lower]{\bexpr}{W}{\cmd}{\top}{W}%
+%     }{%
+%       \text{IH: } \vdash \HT[lower]{}{\WP{\cmd}{W}}{\cmd}{}{W}%
+%     }
+%     &
+%     \begin{array}[b]{l}
+%       r_0 = W \geq W \;\;(\text{P2}) \\[2pt]
+%       \WP{\cmd}{r_i} = r_{i+1} \;\;(\text{P3, by linearity}) \\[2pt]
+%       \lim_{i \to \infty} r_i \;=\; 0 \;\;(\text{P4, Kleene})
+%     \end{array}
+%   }%
+% }
+% \]
+
+% \noindent
+% Weaken-pre uses $\WP{\cmd}{W} = W$ on $\bexpr$ (fixpoint). \\
+% Weaken-post uses $W = f$ on $\neg\bexpr$ (fixpoint). \\
+% P3 holds because $r_{i+1} = W - F^{i+1}(0) = \WP{\cmd}{W} - \WP{\cmd}{F^i(0)} = \WP{\cmd}{r_i}$ on $\bexpr$ (linearity).
+
+% \[
+%   \therefore \quad \vdash \HT[lower]{}{\WP{\WHILE\bexpr\DO\cmd}{f}}{\WHILE\bexpr\DO\cmd}{}{f}
+%   \quad \checkmark
+% \]
+
+% % ----------------------------------------------------------------------
+% \subsection*{Lemma (L2): Completeness}
+
+% \[
+% \infer[\rllabelstyle{Weaken-pre}]{%
+%   \vdash \HT[lower]{}{g}{C}{}{f}%
+% }{%
+%   \text{(L1): } \vdash \HT[lower]{}{\WP{C}{f}}{C}{}{f}%
+%   &
+%   \models \HT[lower]{}{g}{C}{}{f} \;\Rightarrow\; g \leq \WP{C}{f}%
+% }
+% \]
+% \hfill$\qed$
+
+
+\section*{Canonical Witnesses: Worked Examples}\label{app:canonical-examples}
+
+\paragraph{The canonical witness sequence.}
+Given a loop $\WHILE\bexpr\DO\cmd$ with invariant $P$, postcondition expectation $g$, and
+letting $q_n(m)=\Pr(T_m > n)$ denote the tail probabilities of the loop's
+hitting time $T_m$ starting from state $m$, the \emph{canonical} witness sequence is
+\begin{equation}\label{eq:canonical-r}
+  r_n(m,c) \;\defsym\; (c + n + 1)\,q_n(m) \;+\; \sum_{j=n+1}^{\infty} q_j(m).
+\end{equation}
+This can equivalently be written as $r_n(m,c) = c\cdot q_n(m) + \mathbb{E}[T_m \cdot [T_m > n]]$,
+which makes plain why it decreases to zero (the truncated expectation vanishes
+as $n\to\infty$) and why it starts at $g$ (the Abel/tail-sum identity
+$\sum_{n\geq 0} q_n(m) = \mathbb{E}[T_m]$ gives $r_0(m,c)=c+\mathbb{E}[T_m]=g(m,c)$).
+
+We verify the four premises \textbf{P1}--\textbf{P4} of the \textsc{While-lb} rule on two concrete programs.
+
+%----------------------------------------------------------------------
+\subsection*{Example 1: Geometric Termination}
+
+\paragraph{Program.}
+\[
+  C_{\text{geo}} \;\defsym\; \WHILE{b}{\;b \mathrel{:=} \mathrm{Ber}(p);\; c \mathrel{:=} c+1\;}
+\]
+The loop body samples a fresh Bernoulli($p$) bit and increments the counter $c$.
+The loop terminates when $b=\mathbf{false}$, which happens geometrically:
+$T_{b=\mathbf{true}} \sim \mathrm{Geom}(1-p)$, so $\mathbb{E}[T]=\tfrac{1}{1-p}$.
+
+\paragraph{Postcondition and invariant.}
+Take $P \equiv \mathbf{true}$ and
+\[
+  g(b,c) \;\defsym\; c + \frac{[b]}{1-p}.
+\]
+At the false-branch terminal state, $g(\mathbf{false},c)=c$, which records the
+final value of $c$ (number of loop iterations taken).
+
+\paragraph{Tail probabilities.}
+$q_n(\mathbf{true}) = p^n$ and $q_n(\mathbf{false}) = 0$.
+
+\paragraph{Canonical witnesses.}
+\begin{align*}
+  r_n(\mathbf{true},c) &= (c+n+1)\,p^n + \frac{p^{n+1}}{1-p}, \\
+  r_n(\mathbf{false},c) &= 0.
+\end{align*}
+
+\paragraph{Verification of P1.}
+We need $\vdash_{\leq}\HT{b\land P}{g}{C_{\text{body}}}{P}{g}$, i.e.\
+$\mathrm{wp}[b\mathrel{:=}\mathrm{Ber}(p);\,c\mathrel{:=}c+1](g) \geq g$.
+\begin{align*}
+  \mathrm{wp}[C_{\text{body}}](g)(b,c)
+    &= p\cdot g(\mathbf{true},c+1) + (1-p)\cdot g(\mathbf{false},c+1) \\
+    &= p\!\left(c+1+\tfrac{1}{1-p}\right) + (1-p)(c+1) \\
+    &= c + 1 + \tfrac{p}{1-p}
+     = c + \tfrac{1}{1-p}
+     = g(\mathbf{true},c). \checkmark
+\end{align*}
+Equality holds, so P1 is satisfied.
+
+\paragraph{Verification of P2.}
+We need $r_0 \geq g$ on $B\land P$, i.e.\ at $b=\mathbf{true}$:
+\[
+  r_0(\mathbf{true},c)
+  = (c+0+1)\,p^0 + \frac{p^1}{1-p}
+  = c + 1 + \frac{p}{1-p}
+  = c + \frac{1}{1-p}
+  = g(\mathbf{true},c). \checkmark
+\]
+
+\paragraph{Verification of P3.}
+We need $\mathrm{wp}[C_{\text{body}}](r_n) \leq r_{n+1}$. Compute at $b=\mathbf{true}$:
+\begin{align*}
+  \mathrm{wp}[C_{\text{body}}](r_n)(\mathbf{true},c)
+    &= p\cdot r_n(\mathbf{true},c+1) + (1-p)\cdot r_n(\mathbf{false},c+1) \\
+    &= p\!\left[(c+n+2)\,p^n + \frac{p^{n+1}}{1-p}\right] + 0 \\
+    &= (c+n+2)\,p^{n+1} + \frac{p^{n+2}}{1-p}.
+\end{align*}
+Meanwhile,
+\[
+  r_{n+1}(\mathbf{true},c)
+  = (c+n+2)\,p^{n+1} + \frac{p^{n+2}}{1-p}.
+\]
+These are equal, so P3 holds with equality. $\checkmark$
+
+\paragraph{Verification of P4.}
+On $B\land P$ (i.e.\ $b=\mathbf{true}$):
+\[
+  \lim_{n\to\infty} r_n(\mathbf{true},c)
+  = \lim_{n\to\infty}\!\left[(c+n+1)\,p^n + \frac{p^{n+1}}{1-p}\right] = 0,
+\]
+since $p\in(0,1)$ so exponential decay dominates the polynomial prefactor. $\checkmark$
+
+%----------------------------------------------------------------------
+\subsection*{Example 2: Deterministic Countdown}
+
+\paragraph{Program.}
+\[
+  C_{\text{det}} \;\defsym\; \WHILE{x>0}{\;x \mathrel{:=} x-1;\; c \mathrel{:=} c+1\;}
+\]
+The loop body decrements $x$ and increments $c$ deterministically.
+Starting from $x=k\geq 0$, the loop runs exactly $k$ iterations: $T_k = k$.
+
+\paragraph{Postcondition and invariant.}
+Take $P \equiv \mathbf{true}$ and
+\[
+  g(x,c) \;\defsym\; c + x.
+\]
+
+\paragraph{Tail probabilities.}
+Because $T_x = x$ deterministically,
+$q_n(x) = \Pr(T_x > n) = [x > n]$.
+
+\paragraph{Canonical witnesses.}
+\begin{equation*}
+  r_n(x,c) = (c+n+1)\,[x>n] + \sum_{j=n+1}^{\infty}[x>j]
+            = (c+n+1)\,[x>n] + \max(x-n-1,\,0).
+\end{equation*}
+For $x > n$ this simplifies to $(c+n+1) + (x-n-1) = c+x$.
+For $x \leq n$ both terms vanish, giving $r_n(x,c) = 0$.
+Hence
+\[
+  r_n(x,c) = (c + x)\cdot[x > n].
+\]
+
+\paragraph{Verification of P1.}
+\begin{align*}
+  \mathrm{wp}[C_{\text{body}}](g)(x,c)
+    &= g(x-1,\,c+1) = (c+1)+(x-1) = c+x = g(x,c). \checkmark
+\end{align*}
+
+\paragraph{Verification of P2.}
+At $x>0$ (i.e.\ $B\land P$):
+\[
+  r_0(x,c) = (c+x)\cdot[x>0] = c+x = g(x,c). \checkmark
+\]
+
+\paragraph{Verification of P3.}
+\begin{align*}
+  \mathrm{wp}[C_{\text{body}}](r_n)(x,c)
+    &= r_n(x-1,\,c+1) \\
+    &= (c+1+(x-1))\cdot[x-1>n] \\
+    &= (c+x)\cdot[x>n+1] \\
+    &= r_{n+1}(x,c). \checkmark
+\end{align*}
+
+\paragraph{Verification of P4.}
+For any fixed $x$, $[x>n]=0$ for all $n\geq x$, so
+$\lim_{n\to\infty} r_n(x,c) = 0$. $\checkmark$
 
 \end{document}
