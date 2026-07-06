@@ -18,10 +18,10 @@
 \]
 \\
 \subsection{Proof via Main Rule Soundness.}~\\
-\textbf{Premises:}
+\textbf{Premises:}\ma{use align}
 \begin{align*}
-  \text{(1) } [\bexpr \wedge \pred] \cdot \ex &\le \WP{\cmd}{[\pred] \cdot \ex} \\
-  \text{(2) } V &\geq \ex \\
+  \text{(1) } [\bexpr \wedge \pred] \cdot \ex & \WP{\cmd}{[\pred] \cdot \ex} \text{\ma{$\leq$?}}\\
+  \text{(2) } V &\geq \ex \text{\ma{$\leq$?}}\\
   \text{(3) } \WP{\cmd}{V} &\le \beta \cdot V, \quad \beta < 1 \\
   \text{(4) } V &< \infty
 \end{align*}
@@ -267,3 +267,8 @@ which matches the exact expected value of $c_0 + \mathbb{E}[T]$.
 %     &= \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex} \quad \text{(by Scott-continuity)} \\
 %   \implies [\pred] \cdot \ex &\leq \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex} \quad \checkmark
 % \end{align*}
+
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: "paper"
+%%% End:

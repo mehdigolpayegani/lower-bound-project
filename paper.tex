@@ -67,9 +67,13 @@
 
 \newcommand{\eqtag}[1]{\tag{{\color{violet}{#1}}}}
 
+
 \captionsetup{subrefformat=parens}
 
 \begin{document}
+
+\newcommand{\todo}[2][red]{{\ttfamily\color{#1}[#2]}}
+\newcommand{\ma}[1]{\todo[red]{MA: #1}}
 
 \title{Lower bound reasoning with \textsf{eHL}}
 
@@ -86,6 +90,7 @@ the \EHL judgment
   \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
   \qquad {\rel} \in \{{\leq},{\geq}\}
 \]
+\ma{this does not make sense upfront; given $\E{\cmd,\mem}{[\predtwo]\cdot\extwo}$ is the expectation of $\extwo$ on the sub-distribution satisfying $\predtwo$. I just realised towards the end that you use this as a consequence of validity; therefor, it should be stated as such. }
 is defined by:
 \begin{align}
   \HT[lower]{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
@@ -109,6 +114,7 @@ judgment is vacuously satisfied.
 
 
 \paragraph{Validity.}
+\ma{exactly; so why the above?}
 Let $\cmd_\mem$ denote the output distribution of $\cmd$ from memory $\mem$.
 A judgment $\valid \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}$ is \emph{valid}
 if both of the following hold:
@@ -228,7 +234,9 @@ the trapped mass --- to vanish in the limit.
 % ======================================================================
 
 \paragraph{Goal.}
-We want to show that the following rule is sound:
+\ma{I understand $[\pred]$, but not $[\pred \wedge \neg\bexpr]$, why do you need it? explanation needed}
+We want to show that \ma{which rule?} the following rule is sound:
+\ma{Latex: no need to manually fix spacing. $\leq$ is a mathrel and latex will draw the right space for you.} 
 \[
   [\pred] \cdot \ex
   \;\leq\;
@@ -250,6 +258,7 @@ it aborts. Define:
   I_n \;\defsym\; [\pred] \cdot \WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}
 \]
 
+\ma{in the next lemma? do you need $\pred \land \dots$? otherwise, it is superfluous in the Key-inequality lemma.}
 % ----------------------------------------------------------------------
 \begin{lemma}[Recursive characterisation of $I_n$]\label{lem:In-recursion}
 \[
@@ -277,6 +286,7 @@ By induction on $n$.
   &= [\pred] \cdot [\pred \wedge \neg\bexpr] \cdot \ex
    \;=\; [\pred \wedge \neg\bexpr] \cdot \ex \quad\checkmark
 \end{align*}
+\ma{forget checkmark}
 where we used $\WP{\ABORT}{\cdot} = 0$ and
 $[\pred] \cdot [\pred \wedge \neg\bexpr] = [\pred \wedge \neg\bexpr]$.
 
@@ -295,7 +305,7 @@ and applying the SEQ rule:
   &= [\pred] \cdot
      \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{\WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}}
 \end{align*}
-By sub-induction one verifies $[\pred] \cdot I_k = I_k$ for all $k$
+By \ma{sub- make no sense; induction in general makes no sense. You defined $I_n = [\pred] \cdot \dots$ and so trivially $[\pred] \cdot I_n = I_n$}sub-induction one verifies $[\pred] \cdot I_k = I_k$ for all $k$
 (since $I_0 = [\pred \wedge \neg\bexpr] \cdot \ex$ and each $I_{k+1}$
 carries $[\pred \wedge \bexpr]$ or $[\pred \wedge \neg\bexpr]$ as a factor),
 so in particular:
@@ -304,6 +314,13 @@ so in particular:
   \;=\; [\pred] \cdot \WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}
   \;=\; I_n
 \]
+\ma{I dont see the first equality above; below, you have to exploit that $\cmd$ preserves $\pred$. You get this from the first assumption of the rule. Observe that you have something along the lines
+  \[
+    \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
+    \Rightarrow \forall \mem, \pred(\mem) \Rightarrow \E{\cmd,\mem}{\exthree} = \E{\cmd,\mem}{[\predtwo] \cdot \exthree}
+  \]
+  This follows from point (2) of validity.
+}
 Therefore:
 \begin{align*}
   &= [\pred] \cdot \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{I_n} \\
@@ -355,7 +372,7 @@ Expanding $I_{n+1}$ by \Cref{lem:In-recursion}:
      + [\pred \wedge \neg\bexpr] \cdot \ex
      + [\pred] \cdot r_{n+1}
 \end{align*}
-By premise~(c), $[\pred] \cdot r_{n+1} \geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}$:
+By premise~(c), \ma{its better to first spell out what the premises give you literally, and then shortly say why you receive the following:} $[\pred] \cdot r_{n+1} \geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}$:
 \begin{align*}
   &\geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot I_n}
         + [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}
@@ -395,7 +412,7 @@ By condition~(d), $\lim_n r_n = 0$, so $\lim_n ([\pred] \cdot r_n) = 0$:
 \[
   \lim_n ([\pred] \cdot I_n) \;\geq\; [\pred] \cdot \ex
 \]
-By Scott-continuity and \Cref{lem:In-recursion},
+By \ma{this is by definition, not Scott-continuity} Scott-continuity and \Cref{lem:In-recursion},
 $\lim_n I_n = \WP{\WHILE\bexpr\DO\cmd}{[\pred \wedge \neg\bexpr] \cdot \ex}$,
 giving:
 \[
@@ -412,6 +429,7 @@ which is exactly the desired conclusion. \qed
 % ======================================================================
 
 \paragraph{Theorem: Completeness.}
+\ma{what is the completeness theorem? how do you prove it (recall our discussion)}
 \vspace{3mm}
 
 \textbf{Assumptions:}
