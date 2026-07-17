@@ -102,7 +102,7 @@
 
 \paragraph{Program.}
 \[
-  C_{\text{geo}} \;\defsym\; \WHILE{b}{\;b \mathrel{:=} \mathrm{Ber}(p);\; c \mathrel{:=} c+1\;}
+  C_{\text{geo}} \;\defsym\; \WHILE b \DO \{ b <* \mathrm{Ber}(p); c <- c+1 \}
 \]
 At each iteration the loop resamples $b \sim \mathrm{Ber}(p)$ and increments the counter $c$.
 The loop terminates when $\neg b$, which occurs geometrically with
@@ -138,8 +138,8 @@ $V(\mathbf{true},c) = c + \tfrac{1}{1-p} = \ex(\mathbf{true},c)$. \checkmark
     &= p\cdot V(\mathbf{true},c+1) + (1-p)\cdot V(\mathbf{false},c+1) \\
     &= p\!\left(c+1+\tfrac{1}{1-p}\right) = p\,V(\mathbf{true},c) + p.
 \end{align*}
-We need $p\,V + p \leq p(2-p)\,V$, i.e.\ $p \leq p(1-p)\,V = p(1-p)\!\left(c+\tfrac{1}{1-p}\right) = p\bigl((1-p)c+1\bigr)$,
-which reduces to $0 \leq (1-p)\,c$, true for all $c \geq 0$ (with equality at $c=0$). \checkmark
+We need $p\,V + p \leq p(2-p)\,V$ , i.e.\ $p \leq p(1-p)\,V = p(1-p)\!\left(c+\tfrac{1}{1-p}\right) = p\bigl((1-p)c+1\bigr)$,
+which reduces to $0 \leq (1-p)\,c$ \ma{factor p missing?}, true for all $c \geq 0$ (with equality at $c=0$). \checkmark
 
 \noindent\textbf{Premise~4} ($\beta \in [0,1)$):
 $p(2-p) < 1 \iff (1-p)^2 > 0$, which holds for $p \in (0,1)$. \checkmark
