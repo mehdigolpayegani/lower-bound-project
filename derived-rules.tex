@@ -18,11 +18,11 @@
 \]
 \\
 \subsection{Proof via Main Rule Soundness.}~\\
-\textbf{Premises:}\ma{use align}
+\textbf{Premises:}
 \begin{align*}
-  \text{(1) } [\bexpr \wedge \pred] \cdot \ex & \WP{\cmd}{[\pred] \cdot \ex} \text{\ma{$\leq$?}}\\
-  \text{(2) } V &\geq \ex \text{\ma{$\leq$?}}\\
-  \text{(3) } \WP{\cmd}{V} &\le \beta \cdot V, \quad \beta < 1 \\
+  \text{(1) } [\bexpr \wedge \pred] \cdot \ex &\leq \WP{\cmd}{[\pred] \cdot \ex} \\
+  \text{(2) } V &\geq \ex \\
+  \text{(3) } \WP{\cmd}{V} &\leq \beta \cdot V, \quad \beta < 1 \\
   \text{(4) } V &< \infty
 \end{align*}
 
@@ -48,7 +48,7 @@
     &\implies \lim_{i \to \infty} [\bexpr \wedge \pred] \cdot r_i = 0
 \end{align*}
 
-\noindent\textbf{Conclusion:} Soundness follows from the main rule. \quad \checkmark
+\noindent\textbf{Conclusion:} Soundness follows from the main rule.
 \\
 \subsection{Direct Proof.}~\\
 \noindent\textbf{Definitions:} (Recall $I_n$ from \Cref{lem:In-recursion})
@@ -94,7 +94,7 @@
     &\implies \lim_{n \to \infty} r_n = 0 \\
   \lim_{n \to \infty} I_n
     &= \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex} \quad \text{(by Scott-continuity)} \\
-  \implies [\pred] \cdot \ex &\leq \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex} \quad \checkmark
+  \implies [\pred] \cdot \ex &\leq \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex}
 \end{align*}
 
 % ----------------------------------------------------------------------
@@ -126,11 +126,11 @@ Note that $V = \ex$ on $B \wedge P$ (i.e.\ at $b$) and $V = 0$ otherwise.
   \WP{C_{\text{body}}}{\ex}(\mathbf{true},c)
     &= p\,\ex(\mathbf{true},c+1) + (1-p)\,\ex(\mathbf{false},c+1) \\
     &= p\!\left(c+1+\tfrac{1}{1-p}\right) + (1-p)(c+1)
-     = c + \tfrac{1}{1-p} = \ex(\mathbf{true},c). \checkmark
+     = c + \tfrac{1}{1-p} = \ex(\mathbf{true},c).
 \end{align*}
 
 \noindent\textbf{Premise~2} ($V \geq \ex$ on $B\land P$):
-$V(\mathbf{true},c) = c + \tfrac{1}{1-p} = \ex(\mathbf{true},c)$. \checkmark
+$V(\mathbf{true},c) = c + \tfrac{1}{1-p} = \ex(\mathbf{true},c)$.
 
 \noindent\textbf{Premise~3} ($\WP{C_{\text{body}}}{V} \leq \beta\cdot V$ on $B\land P$):
 \begin{align*}
@@ -138,14 +138,14 @@ $V(\mathbf{true},c) = c + \tfrac{1}{1-p} = \ex(\mathbf{true},c)$. \checkmark
     &= p\cdot V(\mathbf{true},c+1) + (1-p)\cdot V(\mathbf{false},c+1) \\
     &= p\!\left(c+1+\tfrac{1}{1-p}\right) = p\,V(\mathbf{true},c) + p.
 \end{align*}
-We need $p\,V + p \leq p(2-p)\,V$ , i.e.\ $p \leq p(1-p)\,V = p(1-p)\!\left(c+\tfrac{1}{1-p}\right) = p\bigl((1-p)c+1\bigr)$,
-which reduces to $0 \leq (1-p)\,c$ \ma{factor p missing?}, true for all $c \geq 0$ (with equality at $c=0$). \checkmark
+We need $p\,V + p \leq p(2-p)\,V$, i.e.\ $p \leq p(1-p)\,V = p(1-p)\!\left(c+\tfrac{1}{1-p}\right) = p\bigl((1-p)c+1\bigr)$.
+Dividing by $p>0$: $1 \leq (1-p)c+1$, which reduces to $0 \leq (1-p)\,c$, true for all $c \geq 0$ (with equality at $c=0$).
 
 \noindent\textbf{Premise~4} ($\beta \in [0,1)$):
-$p(2-p) < 1 \iff (1-p)^2 > 0$, which holds for $p \in (0,1)$. \checkmark
+$p(2-p) < 1 \iff (1-p)^2 > 0$, which holds for $p \in (0,1)$.
 
 \noindent\textbf{Premise~5} ($V < \infty$ on $B\land P$):
-$V(\mathbf{true},c) = c + \tfrac{1}{1-p} < \infty$ for any fixed $c$. \checkmark
+$V(\mathbf{true},c) = c + \tfrac{1}{1-p} < \infty$ for any fixed $c$.
 
 \paragraph{Witnesses and conclusion.}
 The rule instantiates with $r_i(\mathbf{true},c) = \bigl(p(2-p)\bigr)^i\!\left(c+\tfrac{1}{1-p}\right)$,

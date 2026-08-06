@@ -88,49 +88,27 @@ expectations $\ex, \extwo \in \mathrm{Exp}$, and a program $\cmd$,
 the \EHL judgment
 \[
   \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
-  \qquad {\rel} \in \{{\leq},{\geq}\}
+  \qquad {\rel} \in \{{\leq},=,{\geq}\}
 \]
-\ma{this does not make sense upfront; given $\E{\cmd,\mem}{[\predtwo]\cdot\extwo}$ is the expectation of $\extwo$ on the sub-distribution satisfying $\predtwo$. I just realised towards the end that you use this as a consequence of validity; therefor, it should be stated as such. }
-is defined by:
-\begin{align}
-  \HT[lower]{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
-    &\;\;\defsym\;\;
-    \forall \mem \in \Mem.\;\;
-    \pred(\mem) \implies \ex(\mem) \;\leq\; \E{\cmd,\mem}{[\predtwo] \cdot \extwo}
-    \label{eq:lower-sem}
-    \\[4pt]
-  \HT[upper]{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
-    &\;\;\defsym\;\;
-    \forall \mem \in \Mem.\;\;
-    \pred(\mem) \implies \ex(\mem) \;\geq\; \E{\cmd,\mem}{[\predtwo] \cdot \extwo}
-    \label{eq:upper-sem}
-\end{align}
-where $\E{\cmd,\mem}{[\predtwo]\cdot\extwo}$ denotes the expected value of
-$[\predtwo]\cdot\extwo$ over the output distribution of $\cmd$ starting from
-memory $\mem$, or equivalently $\mathcolor{violet}{\WP{\cmd}{[\predtwo]\cdot\extwo}(\mem)}$.
-In both cases, the precondition $\pred$ restricts the obligation to
-memories where $\pred$ holds; at memories where $\pred$ is false the
-judgment is vacuously satisfied.
-
 
 \paragraph{Validity.}
-\ma{exactly; so why the above?}
 Let $\cmd_\mem$ denote the output distribution of $\cmd$ from memory $\mem$.
 A judgment $\valid \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}$ is \emph{valid}
 if both of the following hold:
 \begin{enumerate}
   \item $\forall\mem \in \Mem . \pred(\mem) \implies \supp(\cmd_\mem) \subseteq \predtwo$
-  \item $\forall\mem \in \Mem . \pred(\mem) \implies \ex(\mem) \;\HTrel\; \E{\cmd,\mem}{\extwo}$
+  \item $\forall\mem \in \Mem . \pred(\mem) \implies \ex(\mem) \;\HTrel\; \E{\cmd,\mem}{[\predtwo]\cdot\extwo}$
 \end{enumerate}
 Condition~(1) requires that all output memories satisfy the postcondition
 $\predtwo$. Condition~(2) requires that $\ex(\mem)$ bounds the expected
-value of $\extwo$ under the output distribution of $\cmd$.
-% Together, since $\supp(\cmd_\mem) \subseteq \predtwo$ implies
-% $\E{\cmd,\mem}{\extwo} = \E{\cmd,\mem}{[\predtwo]\cdot\extwo}$,
-% the two conditions are jointly equivalent to:
-% \[
-%   [\pred]\cdot\ex \;\HTrel\; \WP{\cmd}{[\predtwo]\cdot\extwo}
-% \]
+value of $\extwo$ restricted to outputs satisfying $\predtwo$.
+
+\paragraph{Remark.}\label{rem:validity-indicator}
+Since Condition~(1) guarantees $\supp(\cmd_\mem) \subseteq \predtwo$,
+the indicator $[\predtwo]$ evaluates to $1$ on every output state of $\cmd$, and therefore
+\[
+  \E{\cmd,\mem}{[\predtwo]\cdot\extwo} \;=\; \E{\cmd,\mem}{\extwo}.
+\]
 
 \begin{figure}[H]
     \[
@@ -234,12 +212,16 @@ the trapped mass --- to vanish in the limit.
 % ======================================================================
 
 \paragraph{Goal.}
-\ma{I understand $[\pred]$, but not $[\pred \wedge \neg\bexpr]$, why do you need it? explanation needed}
-We want to show that \ma{which rule?} the following rule is sound:
-\ma{Latex: no need to manually fix spacing. $\leq$ is a mathrel and latex will draw the right space for you.} 
+We want to show that the \textsc{While-lb} rule of \Cref{fig:hoare:while-lb}
+is sound, i.e.\ that its conclusion
+$\HT[lower]{\pred}{\ex}{\WHILE\bexpr\DO\cmd}{\neg\bexpr\land\pred}{\ex}$ is
+valid. Its postcondition is $\neg\bexpr\land\pred$, so by validity
+Condition~(2) the indicator $[\pred\land\neg\bexpr]$ below is exactly the
+postcondition indicator applied to $\ex$; we keep it explicit because it is
+manipulated directly throughout the proof:
 \[
   [\pred] \cdot \ex
-  \;\leq\;
+  \leq
   \WP{\WHILE\bexpr\DO\cmd}{[\pred \wedge \neg\bexpr] \cdot \ex}
 \]
 
@@ -255,17 +237,16 @@ Define the family of approximating programs:
 where $W_n$ allows at most $n$ iterations; if the loop would continue beyond $n$,
 it aborts. Define:
 \[
-  I_n \;\defsym\; [\pred] \cdot \WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}
+  I_n \;\defsym\; \WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}
 \]
 
-\ma{in the next lemma? do you need $\pred \land \dots$? otherwise, it is superfluous in the Key-inequality lemma.}
 % ----------------------------------------------------------------------
 \begin{lemma}[Recursive characterisation of $I_n$]\label{lem:In-recursion}
 \[
   I_0 \;=\; [\pred \wedge \neg\bexpr] \cdot \ex
   \qquad\text{and}\qquad
   I_{n+1}
-  \;=\; [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot I_n}
+  \;=\; [\bexpr] \cdot \WP{\cmd}{I_n}
         + [\pred \wedge \neg\bexpr] \cdot \ex
 \]
 \end{lemma}
@@ -276,67 +257,38 @@ By induction on $n$.
 \medskip\noindent\textbf{Base case $n=0$.}
 \begin{align*}
   I_0
-  &= [\pred] \cdot
-     \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex} \\
-  &= [\pred] \cdot \Bigl(
-       [\bexpr] \cdot \WP{\ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex}
-     + [\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] \cdot \ex\Bigr) \\
-  &= [\pred] \cdot \bigl([\bexpr] \cdot 0
-     + [\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] \cdot \ex\bigr) \\
-  &= [\pred] \cdot [\pred \wedge \neg\bexpr] \cdot \ex
-   \;=\; [\pred \wedge \neg\bexpr] \cdot \ex \quad\checkmark
+  &= \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex} \\
+  &= [\bexpr] \cdot \WP{\ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex}
+     + [\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] \cdot \ex \\
+  &= [\bexpr] \cdot 0 + [\pred \wedge \neg\bexpr] \cdot \ex
+   \;=\; [\pred \wedge \neg\bexpr] \cdot \ex
 \end{align*}
-\ma{forget checkmark}
 where we used $\WP{\ABORT}{\cdot} = 0$ and
-$[\pred] \cdot [\pred \wedge \neg\bexpr] = [\pred \wedge \neg\bexpr]$.
+$[\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] = [\pred \wedge \neg\bexpr]$.
 
 \medskip\noindent\textbf{Inductive step $n \to n+1$.}
-\begin{align*}
-  I_{n+1}
-  &= [\pred] \cdot \WP{(\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^{n+1}
-     \mathbin{;} \kwd{if}\ \bexpr\ \kwd{then}\ \ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex}
-\end{align*}
-Unfolding
-$(\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^{n+1}
+Since $(\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^{n+1}
  = \kwd{if}\ \bexpr\ \kwd{then}\ \cmd
-   \mathbin{;} (\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^n$
-and applying the SEQ rule:
+   \mathbin{;} (\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^n$, we have
+$W_{n+1} = (\kwd{if}\ \bexpr\ \kwd{then}\ \cmd) \mathbin{;} W_n$, so:
 \begin{align*}
-  &= [\pred] \cdot
-     \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{\WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}}
+  I_{n+1}
+  &= \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{\WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}} \\
+  &= \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{I_n} \\
+  &= [\bexpr] \cdot \WP{\cmd}{I_n} + [\neg\bexpr] \cdot I_n
 \end{align*}
-By \ma{sub- make no sense; induction in general makes no sense. You defined $I_n = [\pred] \cdot \dots$ and so trivially $[\pred] \cdot I_n = I_n$}sub-induction one verifies $[\pred] \cdot I_k = I_k$ for all $k$
-(since $I_0 = [\pred \wedge \neg\bexpr] \cdot \ex$ and each $I_{k+1}$
-carries $[\pred \wedge \bexpr]$ or $[\pred \wedge \neg\bexpr]$ as a factor),
-so in particular:
+It remains to identify $[\neg\bexpr] \cdot I_n$. When $\neg\bexpr$ already
+holds at the starting memory, none of the guard checks inside $W_n$ ever
+fire, so the memory is left untouched and $I_n$ reduces directly to
+$[\pred \wedge \neg\bexpr] \cdot \ex$:
 \[
-  \WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}
-  \;=\; [\pred] \cdot \WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}
-  \;=\; I_n
+  [\neg\bexpr] \cdot I_n
+  \;=\; [\pred \wedge \neg\bexpr] \cdot \ex.
 \]
-\ma{I dont see the first equality above; below, you have to exploit that $\cmd$ preserves $\pred$. You get this from the first assumption of the rule. Observe that you have something along the lines
-  \[
-    \HT{\pred}{\ex}{\cmd}{\predtwo}{\extwo}
-    \Rightarrow \forall \mem, \pred(\mem) \Rightarrow \E{\cmd,\mem}{\exthree} = \E{\cmd,\mem}{[\predtwo] \cdot \exthree}
-  \]
-  This follows from point (2) of validity.
-}
 Therefore:
-\begin{align*}
-  &= [\pred] \cdot \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{I_n} \\
-  &= [\pred] \cdot \bigl([\bexpr] \cdot \WP{\cmd}{I_n} + [\neg\bexpr] \cdot I_n\bigr) \\
-  &= [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n} + [\pred \wedge \neg\bexpr] \cdot I_n
-\end{align*}
-Using $[\pred] \cdot I_n = I_n$ and the identity
-$[\pred \wedge \neg\bexpr] \cdot I_n = [\pred \wedge \neg\bexpr] \cdot \ex$
-(which follows from $[\neg\bexpr] \cdot I_n
- = [\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] \cdot \ex
- = [\pred \wedge \neg\bexpr] \cdot \ex$):
 \[
   I_{n+1}
-  \;=\; [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot I_n}
-        + [\pred \wedge \neg\bexpr] \cdot \ex
-  \quad\checkmark
+  \;=\; [\bexpr] \cdot \WP{\cmd}{I_n} + [\pred \wedge \neg\bexpr] \cdot \ex
 \]
 \end{proof}
 
@@ -361,28 +313,48 @@ By induction on $n$.
 By premise~(b), $[\pred] \cdot r_0 \geq [\pred \wedge \bexpr] \cdot \ex$, so:
 \[
   \;\geq\; [\pred \wedge \neg\bexpr] \cdot \ex + [\pred \wedge \bexpr] \cdot \ex
-  \;=\; [\pred] \cdot \ex \quad\checkmark
+  \;=\; [\pred] \cdot \ex
 \]
 
 \medskip\noindent\textbf{Inductive step $n \to n+1$.}
-Expanding $I_{n+1}$ by \Cref{lem:In-recursion}:
+Expanding $I_{n+1}$ by \Cref{lem:In-recursion} and multiplying by $[\pred]$:
 \begin{align*}
   [\pred] \cdot I_{n+1} + [\pred] \cdot r_{n+1}
-  &= [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot I_n}
+  &= [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n}
      + [\pred \wedge \neg\bexpr] \cdot \ex
      + [\pred] \cdot r_{n+1}
 \end{align*}
-By premise~(c), \ma{its better to first spell out what the premises give you literally, and then shortly say why you receive the following:} $[\pred] \cdot r_{n+1} \geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}$:
+Premise~(c) gives $[\pred \wedge \bexpr] \cdot r_{n+1} \geq \WP{\cmd}{r_n}$. Multiplying by
+$[\pred]$ (using $[\pred]\cdot[\pred\wedge\bexpr] = [\pred\wedge\bexpr]$):
+\[
+  [\pred \wedge \bexpr] \cdot r_{n+1} \;\geq\; [\pred] \cdot \WP{\cmd}{r_n}
+\]
+Since $r_n \geq [\pred]\cdot r_n$ pointwise ($r_n$ is non-negative), monotonicity of $\WP{\cmd}{\cdot}$
+gives $\WP{\cmd}{r_n} \geq \WP{\cmd}{[\pred]\cdot r_n}$, hence
+$[\pred]\cdot\WP{\cmd}{r_n} \geq [\pred\wedge\bexpr]\cdot\WP{\cmd}{[\pred]\cdot r_n}$. Combining, and
+extending from $[\pred\wedge\bexpr]$ to $[\pred]$ using non-negativity of $r_{n+1}$ on the
+$[\pred\wedge\neg\bexpr]$ part:
+\[
+  [\pred] \cdot r_{n+1} \;\geq\; [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}
+\]
+Substituting into the expansion of $[\pred]\cdot I_{n+1}+[\pred]\cdot r_{n+1}$ above:
 \begin{align*}
-  &\geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot I_n}
+  [\pred] \cdot I_{n+1} + [\pred] \cdot r_{n+1}
+  &\geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n}
         + [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}
         + [\pred \wedge \neg\bexpr] \cdot \ex
 \end{align*}
 By linearity of $\WP{\cmd}{\cdot}$:
 \begin{align*}
-  &= [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot I_n + [\pred] \cdot r_n}
+  &= [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n + [\pred] \cdot r_n}
      + [\pred \wedge \neg\bexpr] \cdot \ex
 \end{align*}
+Since $I_n \geq [\pred]\cdot I_n$ pointwise ($I_n$ is non-negative), monotonicity of $\WP{\cmd}{\cdot}$
+gives:
+\[
+  [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n + [\pred] \cdot r_n}
+  \;\geq\; [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred]\cdot I_n + [\pred] \cdot r_n}
+\]
 By the induction hypothesis
 $[\pred] \cdot I_n + [\pred] \cdot r_n \geq [\pred] \cdot \ex$
 and monotonicity of $\WP{\cmd}{\cdot}$:
@@ -390,11 +362,11 @@ and monotonicity of $\WP{\cmd}{\cdot}$:
   &\geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot \ex}
         + [\pred \wedge \neg\bexpr] \cdot \ex
 \end{align*}
-By premise~(a),
+By premise~(a), validity Condition~(2) gives
 $[\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot \ex} \geq [\pred \wedge \bexpr] \cdot \ex$:
 \[
   \;\geq\; [\pred \wedge \bexpr] \cdot \ex + [\pred \wedge \neg\bexpr] \cdot \ex
-  \;=\; [\pred] \cdot \ex \quad\checkmark
+  \;=\; [\pred] \cdot \ex
 \]
 \end{proof}
 
@@ -412,7 +384,7 @@ By condition~(d), $\lim_n r_n = 0$, so $\lim_n ([\pred] \cdot r_n) = 0$:
 \[
   \lim_n ([\pred] \cdot I_n) \;\geq\; [\pred] \cdot \ex
 \]
-By \ma{this is by definition, not Scott-continuity} Scott-continuity and \Cref{lem:In-recursion},
+By definition and \Cref{lem:In-recursion},
 $\lim_n I_n = \WP{\WHILE\bexpr\DO\cmd}{[\pred \wedge \neg\bexpr] \cdot \ex}$,
 giving:
 \[
@@ -428,55 +400,126 @@ which is exactly the desired conclusion. \qed
 \section{Completeness}\label{app:completeness}
 % ======================================================================
 
-\paragraph{Theorem: Completeness.}
-\ma{what is the completeness theorem? how do you prove it (recall our discussion)}
-\vspace{3mm}
+The witness premises of \Cref{fig:hoare:while-lb} should not rule out a
+semantically valid lower bound merely because the appropriate witnesses are
+not given in advance.  The following theorem makes this precise for loops
+whose exact pre-expectation is finite.
 
-\textbf{Assumptions:}
+\begin{theorem}[Finite-witness completeness of \textsc{While-lb}]
+\label{thm:while-lb-completeness}
+Define
+\[
+  H \defsym
+  \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr\land\pred]\cdot\ex}.
+\]
+Assume that:
+\begin{enumerate}
+  \item the invariant premise
+  $\HT[lower]{\bexpr\land\pred}{\ex}{\cmd}{\pred}{\ex}$ holds;
+  \item the desired lower bound is semantically valid, and hence
+  $[\pred]\cdot\ex\leq H$; and
+  \item $H$ is finite-valued.
+\end{enumerate}
+Then there exists a sequence of non-negative, finite-valued expectations
+$\{r_n\}_{n\geq0}$ satisfying Premises~2--4 of
+\Cref{fig:hoare:while-lb}.  Hence all premises of the rule are satisfied and
+it derives
+\[
+  \HT[lower]{\pred}{\ex}{\WHILE\bexpr\DO\cmd}{\neg\bexpr\land\pred}{\ex}.
+\]
+\end{theorem}
+
+\begin{proof}
+Consider the finite-loop approximants
+\[
+  I_0 \defsym [\neg\bexpr\land\pred]\cdot\ex,
+  \qquad
+  I_{n+1} \defsym [\bexpr]\cdot\WP{\cmd}{I_n}
+  +[\neg\bexpr\land\pred]\cdot\ex.
+\]
+By the least-fixed-point semantics of the loop,
+\[
+  I_n \uparrow H
+  \qquad\text{and}\qquad
+  H=[\bexpr]\cdot\WP{\cmd}{H}
+  +[\neg\bexpr\land\pred]\cdot\ex.
+\]
+In particular, $0\leq I_n\leq H$.  Since $H$ is finite-valued, the pointwise
+differences
+\[
+  r_n \defsym H-I_n
+\]
+are well-defined non-negative, finite-valued expectations.  Intuitively,
+$I_n$ is the post-expectation already collected by the $n$th approximant and
+$r_n$ is the part that remains to be collected.
+
+\paragraph{Premise 2.}
+On states satisfying $\bexpr\land\pred$,
 \begin{align*}
-  1. \quad & [\pred] \cdot \ex \;\leq\; \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex} \\
-  2. \quad & [\bexpr\land\pred] \cdot \ex \;\leq\; \WP{\cmd}{[\pred] \cdot \ex}
+  I_0
+  &= [\neg\bexpr\land\pred]\cdot\ex = 0, \\
+  r_0
+  &= H-I_0 = H, \\
+  [\bexpr\land\pred]\cdot r_0
+  &= [\bexpr\land\pred]\cdot H \\
+  &\geq [\bexpr\land\pred]\cdot\ex.
 \end{align*}
+The final inequality is Assumption~2 restricted to states in which the loop
+guard is true.  Thus $r_0$ contains at least the entire lower bound $\ex$
+before any loop iteration has been approximated.
 
-\noindent\textbf{Definitions:}
+\paragraph{Premise 3.}
+Since $H=I_n+r_n$ and all three expectations are finite-valued, additivity of
+$\WP{\cmd}{\cdot}$ and the two recursive equations give, on states satisfying
+$\bexpr$,
 \begin{align*}
-  H &\defsym \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr \wedge \pred] \cdot \ex} \\
-  I_0 &\defsym [\neg\bexpr \wedge \pred] \cdot \ex \\
-  I_{i+1} &\defsym [\bexpr] \cdot \WP{\cmd}{I_i} + I_0 \\
-  r_i &\defsym H - I_i
+  \WP{\cmd}{H}
+  &= \WP{\cmd}{I_n}+\WP{\cmd}{r_n}, \\
+  r_{n+1}
+  &= H-I_{n+1} \\
+  &= \bigl(\WP{\cmd}{H}
+      +[\neg\bexpr\land\pred]\cdot\ex\bigr)
+     -\bigl(\WP{\cmd}{I_n}
+      +[\neg\bexpr\land\pred]\cdot\ex\bigr) \\
+  &= \WP{\cmd}{H}-\WP{\cmd}{I_n} \\
+  &= \WP{\cmd}{r_n}.
 \end{align*}
+Consequently,
+\[
+  \valid
+  \HT[upper]{\bexpr\land\pred}{r_{n+1}}{\cmd}{\top}{r_n}
+\]
+holds with equality in its quantitative condition.  Its qualitative
+condition is immediate because its postcondition is $\top$.  Intuitively, one
+execution of the body transforms the mass remaining after the $n$th
+approximant into exactly the mass remaining after the $(n+1)$st approximant.
 
-\noindent\textbf{Verification of Premise 2:}
+\paragraph{Premise 4.}
+Because $I_n\uparrow H$ and $H$ is finite-valued,
 \begin{align*}
-& \bexpr \wedge \pred \implies I_0 = 0 \\
-& r_0 = H - I_0 = H \\
-& \text{P holds so: } H \ge [\pred] \cdot \ex \implies H \ge \ex \\
-& [\bexpr \wedge \pred] \cdot r_0 \ge [\bexpr \wedge \pred] \cdot \ex
+  \lim_{n\to\infty}r_n
+  &= \lim_{n\to\infty}(H-I_n) \\
+  &= H-\lim_{n\to\infty}I_n \\
+  &= H-H = 0.
 \end{align*}
+Hence
+\[
+  \bexpr\land\pred \valid \lim_{n\to\infty}r_n=0.
+\]
+Thus the part of the post-expectation not yet captured by the finite
+approximants vanishes in the limit.
+Premise~1 holds by Assumption~1, so the conclusion follows by an application
+of \textsc{While-lb}.
+\end{proof}
 
-\noindent\textbf{Verification of Premise 3:}
-\begin{align*}
-  H &= [\bexpr] \cdot \WP{\cmd}{H} + I_0 \\
-  r_{i+1} &= H - I_{i+1} \\
-  r_{i+1} &= ([\bexpr] \cdot \WP{\cmd}{H} + I_0) - ([\bexpr] \cdot \WP{\cmd}{I_i} + I_0) \\
-  r_{i+1} &= [\bexpr] \cdot (\WP{\cmd}{H} - \WP{\cmd}{I_i}) \\
-  r_{i+1} &= [\bexpr] \cdot \WP{\cmd}{H - I_i} = [\bexpr] \cdot \WP{\cmd}{r_i} \\
-  \text{By Monotonicity: } r_i &\geq [\pred] \cdot r_i \implies \WP{\cmd}{r_i} \geq \WP{\cmd}{[\pred] \cdot r_i} \\
-  \quad [\bexpr\land\pred] \cdot r_{i+1} &\geq [\bexpr\land\pred] \cdot \WP{\cmd}{[\pred] \cdot r_i}
-\end{align*}
-
-\noindent\textbf{Verification of Premise 4:}
-\begin{align*}
-  \lim_{i \to \infty} I_i &= H \\
-  \lim_{i \to \infty} r_i &= H - \lim_{i \to \infty} I_i = H - H = 0 \\
-  \quad \lim_{i \to \infty} r_i &= 0
-\end{align*}
-
-\input{derived-rules.tex}
+\paragraph{Remark on finiteness.}
+Assumption~3 is needed by this canonical construction.  If $H$ is allowed to
+take the value $\infty$, then $H-I_n$ may contain the undefined expression
+$\infty-\infty$.  This does not mean that \textsc{While-lb} cannot prove any
+infinite-valued specification; it means only that such a proof may require a
+different witness sequence.
 
 
-\noindent\makebox[\linewidth]{\rule{\textwidth}{0.4pt}}
-% ======================================================================
 % \section{Completeness}\label{app:completeness}
 % % ======================================================================
 
@@ -560,6 +603,10 @@ which is exactly the desired conclusion. \qed
 % \]
 % \hfill$\qed$
 
+\input{derived-rules.tex}
+
+
+\noindent\makebox[\linewidth]{\rule{\textwidth}{0.4pt}}
 
 \section*{Canonical Witnesses: Worked Examples}\label{app:canonical-examples}
 
@@ -614,7 +661,7 @@ $\mathrm{wp}[b\mathrel{:=}\mathrm{Ber}(p);\,c\mathrel{:=}c+1](g) \geq g$.
     &= p\!\left(c+1+\tfrac{1}{1-p}\right) + (1-p)(c+1) \\
     &= c + 1 + \tfrac{p}{1-p}
      = c + \tfrac{1}{1-p}
-     = g(\mathbf{true},c). \checkmark
+     = g(\mathbf{true},c).
 \end{align*}
 Equality holds, so P1 is satisfied.
 
@@ -625,7 +672,7 @@ We need $r_0 \geq g$ on $B\land P$, i.e.\ at $b=\mathbf{true}$:
   = (c+0+1)\,p^0 + \frac{p^1}{1-p}
   = c + 1 + \frac{p}{1-p}
   = c + \frac{1}{1-p}
-  = g(\mathbf{true},c). \checkmark
+  = g(\mathbf{true},c).
 \]
 
 \paragraph{Verification of P3.}
@@ -641,7 +688,7 @@ Meanwhile,
   r_{n+1}(\mathbf{true},c)
   = (c+n+2)\,p^{n+1} + \frac{p^{n+2}}{1-p}.
 \]
-These are equal, so P3 holds with equality. $\checkmark$
+These are equal, so P3 holds with equality.
 
 \paragraph{Verification of P4.}
 On $B\land P$ (i.e.\ $b=\mathbf{true}$):
@@ -649,7 +696,7 @@ On $B\land P$ (i.e.\ $b=\mathbf{true}$):
   \lim_{n\to\infty} r_n(\mathbf{true},c)
   = \lim_{n\to\infty}\!\left[(c+n+1)\,p^n + \frac{p^{n+1}}{1-p}\right] = 0,
 \]
-since $p\in(0,1)$ so exponential decay dominates the polynomial prefactor. $\checkmark$
+since $p\in(0,1)$ so exponential decay dominates the polynomial prefactor.
 
 %----------------------------------------------------------------------
 \subsection*{Example 2: Deterministic Countdown}
@@ -686,13 +733,13 @@ Hence
 \paragraph{Verification of P1.}
 \begin{align*}
   \mathrm{wp}[C_{\text{body}}](g)(x,c)
-    &= g(x-1,\,c+1) = (c+1)+(x-1) = c+x = g(x,c). \checkmark
+    &= g(x-1,\,c+1) = (c+1)+(x-1) = c+x = g(x,c).
 \end{align*}
 
 \paragraph{Verification of P2.}
 At $x>0$ (i.e.\ $B\land P$):
 \[
-  r_0(x,c) = (c+x)\cdot[x>0] = c+x = g(x,c). \checkmark
+  r_0(x,c) = (c+x)\cdot[x>0] = c+x = g(x,c).
 \]
 
 \paragraph{Verification of P3.}
@@ -701,11 +748,13 @@ At $x>0$ (i.e.\ $B\land P$):
     &= r_n(x-1,\,c+1) \\
     &= (c+1+(x-1))\cdot[x-1>n] \\
     &= (c+x)\cdot[x>n+1] \\
-    &= r_{n+1}(x,c). \checkmark
+    &= r_{n+1}(x,c).
 \end{align*}
 
 \paragraph{Verification of P4.}
 For any fixed $x$, $[x>n]=0$ for all $n\geq x$, so
-$\lim_{n\to\infty} r_n(x,c) = 0$. $\checkmark$
+$\lim_{n\to\infty} r_n(x,c) = 0$.
+
+\input{benchmarks.tex}
 
 \end{document}

@@ -1,0 +1,572 @@
+% ======================================================================
+% Benchmark examples for the While-lb rule and the derived While-Mult rule.
+% This file is self-contained and \input at the end of paper.tex.
+% ======================================================================
+\newpage
+
+% The style file makes `<' active (it renders as \le, or as an assignment
+% arrow when followed by - or *).  \lt gives a genuine strict inequality.
+{\catcode`\<=12 \gdef\lt{\mathrel{<}}}
+
+% ======================================================================
+\section{Benchmark Examples}\label{app:benchmarks}
+% ======================================================================
+
+We validate the general rule \textsc{While-lb} of \Cref{fig:hoare:while-lb}
+and the derived rule \textsc{While-Mult} of \Cref{app:derived-rule} on five
+benchmarks from the literature on lower bounds for probabilistic loops.
+Throughout, $\cmd \oplus_{p} \cmdtwo$ denotes probabilistic choice,
+\[
+  \WP{\cmd \oplus_{p} \cmdtwo}{f}
+  \;=\;
+  p \cdot \WP{\cmd}{f} + (1-p)\cdot\WP{\cmdtwo}{f},
+\]
+where the probability $p$ may be a state-dependent expression. For a loop
+$\WHILE\bexpr\DO\cmd$ and a memory $\mem$, $T_\mem$ denotes its termination
+time (number of body executions) started from $\mem$, and
+$q_n(\mem) \defsym \Pr(T_\mem > n)$ its tail probabilities, as in
+\Cref{app:canonical-examples}. In every example below the certified lower
+bound coincides with the exact quantity, i.e.\ the rules are applied at full
+tightness.
+
+\paragraph{Choosing between the two rules.}
+The witnesses of \textsc{While-Mult} are geometric, $r_i = \beta^i V$, and this
+is not an accident of the proof: whenever the rule applies, the mass still
+trapped in the loop after $n$ iterations \emph{must} decay geometrically. The
+following proposition makes the criterion precise; we use it below to show
+that two of the five benchmarks provably lie outside the scope of
+\textsc{While-Mult}.
+
+\begin{proposition}[Geometric tails are necessary for \textsc{While-Mult}]%
+\label{prop:geo-tail}
+Suppose premises 1--5 of \textsc{While-Mult} hold for the termination triple
+$\HT[lower]{\pred}{1}{\WHILE\bexpr\DO\cmd}{\neg\bexpr\land\pred}{1}$.
+Then for every $\mem \vDash \bexpr\land\pred$ and every $n \geq 0$,
+\[
+  \Pr(T_\mem > n) \;\leq\; \beta^{n}\, V(\mem).
+\]
+\end{proposition}
+
+\begin{proof}
+As in \Cref{app:derived-rule}, the sequence $r_n \defsym \beta^n V$ satisfies
+premises 2--4 of the main rule, so \Cref{lem:key-ineq} yields
+$[\pred]\cdot I_n + [\pred]\cdot r_n \geq [\pred]\cdot 1$ with
+$I_n = [\pred]\cdot\WP{W_n}{[\pred\wedge\neg\bexpr]\cdot 1}$. Since $W_n$
+aborts all runs exceeding $n$ iterations,
+$I_n(\mem) \leq \Pr(T_\mem \leq n)$, and therefore, at any
+$\mem \vDash \bexpr \land \pred$,
+\[
+  \Pr(T_\mem > n)
+  \;=\; 1 - \Pr(T_\mem \leq n)
+  \;\leq\; 1 - I_n(\mem)
+  \;\leq\; r_n(\mem)
+  \;=\; \beta^n V(\mem).
+  \qedhere
+\]
+\end{proof}
+
+Consequently, a loop that terminates almost surely but whose termination time
+has a polynomial tail admits \emph{no} instantiation of \textsc{While-Mult}
+for the termination triple, no matter how $V$ and $\beta$ are chosen
+(\Cref{app:bench-spline,app:bench-rw}). Conversely, geometric tails do not by
+themselves make the instantiation obvious: the natural candidate $V = \ex$
+may fail and a reweighted $V$ is needed
+(\Cref{app:bench-nb,app:bench-cc}).
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{lllll}
+    \toprule
+    Benchmark & Certified bound & Tail of $T$ & Rule \\
+    \midrule
+    Gambler's ruin (\ref{app:bench-ruin})
+      & $\Pr(\text{win}) \geq x/N$
+      & $\Theta(\cos^n(\pi/N))$
+      & \textsc{While-Mult} \\
+    Negative binomial (\ref{app:bench-nb})
+      & $\mathbb{E}[c_{\text{final}}] \geq c + x/p$
+      & geometric
+      & \textsc{While-Mult} \\
+    Coupon collector (\ref{app:bench-cc})
+      & $\mathbb{E}[c_{\text{final}}] \geq c + N\mathcal{H}_k$
+      & $\Theta((1-\sfrac{1}{N})^n)$
+      & \textsc{While-Mult} \\
+    Escaping spline (\ref{app:bench-spline})
+      & $\Pr(\text{termination}) \geq 1$
+      & $x/(x+n)$
+      & \textsc{While-lb} \\
+    Symmetric random walk (\ref{app:bench-rw})
+      & $\Pr(\text{termination}) \geq 1$
+      & $\Theta(x/\sqrt{n})$
+      & \textsc{While-lb} \\
+    \bottomrule
+  \end{tabular}
+  \caption{The five benchmarks. For the last two, \textsc{While-Mult} is
+  provably inapplicable by \Cref{prop:geo-tail}.}
+\end{table}
+
+% ----------------------------------------------------------------------
+\subsection{Gambler's Ruin (Bounded Symmetric Random Walk)}%
+\label{app:bench-ruin}
+% ----------------------------------------------------------------------
+
+\paragraph{Program.}
+Fix an integer $N \geq 2$ and let $x$ range over $\{0,\dots,N\}$:
+\[
+  C_{\text{ruin}} \;\defsym\;
+  \WHILE{0 \lt x \lt N}{\;
+    (x \mathrel{:=} x-1) \oplus_{1/2} (x \mathrel{:=} x+1)
+  \;}
+\]
+A fair gambler starts with $x$ coins and plays until ruin ($x = 0$) or
+victory ($x = N$). The loop terminates almost surely and the classical
+winning probability is exactly $x/N$.
+
+\paragraph{Specification.}
+Take $\pred \equiv 0 \leq x \leq N$, $\bexpr \equiv 0 \lt x \lt N$, and
+\[
+  \ex(x) \;\defsym\; \frac{x}{N}.
+\]
+On terminal states $x \in \{0, N\}$ the expectation $\ex$ equals the winning
+indicator $[x = N]$, so the target triple
+$\HT[lower]{\pred}{\ex}{C_{\text{ruin}}}{\neg\bexpr\land\pred}{\ex}$
+certifies $\Pr(x_{\text{final}} = N) \geq x_0/N$.
+
+\paragraph{Instantiation of \textsc{While-Mult}.}
+\[
+  V(x) \;\defsym\; N \sin\!\Bigl(\frac{\pi x}{N}\Bigr)
+  \quad (0 \leq x \leq N; \text{ and } V \defsym 0 \text{ elsewhere}),
+  \qquad
+  \beta \;\defsym\; \cos\!\Bigl(\frac{\pi}{N}\Bigr).
+\]
+
+\paragraph{Premise 1} ($\HT[lower]{\bexpr\land\pred}{\ex}{\cmd}{\pred}{\ex}$):
+both successor states lie in $[0,N]$, so the $[\pred]$ factor is $1$ and
+\[
+  \WP{C_{\text{body}}}{\ex}(x)
+  = \frac{1}{2}\cdot\frac{x-1}{N} + \frac{1}{2}\cdot\frac{x+1}{N}
+  = \frac{x}{N}
+  = \ex(x).
+  \checkmark
+\]
+Equality holds: $\ex$ is harmonic for the fair walk.
+
+\paragraph{Premise 2} ($V \geq \ex$ on $\bexpr\land\pred$):
+by Jordan's inequality $\sin\theta \geq \tfrac{2}{\pi}\theta$ on
+$[0,\sfrac{\pi}{2}]$ and the symmetry
+$\sin(\pi x/N) = \sin(\pi(N-x)/N)$,
+\[
+  V(x) \;\geq\; 2\min(x,\,N-x) \;\geq\; 2 \;>\; 1 \;\geq\; \ex(x)
+  \qquad (1 \leq x \leq N-1).
+  \checkmark
+\]
+
+\paragraph{Premise 3} ($\WP{C_{\text{body}}}{V} \leq \beta V$ on
+$\bexpr\land\pred$): by the sum-to-product identity
+$\sin(a-d) + \sin(a+d) = 2\sin a \cos d$,
+\[
+  \WP{C_{\text{body}}}{V}(x)
+  = \frac{N}{2}\Bigl(\sin\tfrac{\pi(x-1)}{N} + \sin\tfrac{\pi(x+1)}{N}\Bigr)
+  = N\sin\tfrac{\pi x}{N}\,\cos\tfrac{\pi}{N}
+  = \beta\, V(x).
+  \checkmark
+\]
+Equality holds even at the boundary cases $x = 1$ and $x = N-1$, since
+$V(0) = V(N) = 0$: $V$ is an eigenfunction of the one-step operator of the
+walk killed at $\{0, N\}$.
+
+\paragraph{Premises 4 and 5.}
+$\beta = \cos(\pi/N) \in [0,1)$ for $N \geq 2$, and $V \leq N \lt \infty$.
+$\checkmark$
+
+\paragraph{Conclusion.}
+With witnesses $r_i(x) = \cos^i(\pi/N)\cdot N\sin(\pi x/N)$,
+\[
+  \vdash\; \HT[lower]{0 \leq x \leq N}{\tfrac{x}{N}}
+     {C_{\text{ruin}}}{x \in \{0,N\}}{\tfrac{x}{N}},
+\]
+i.e.\ $\Pr(\text{the gambler wins}) \geq x_0/N$, matching the exact value.
+Moreover $\beta$ is optimal: $\cos(\pi/N)$ is the spectral radius of the
+killed walk, and indeed $q_n(x) = \Theta(\cos^n(\pi/N))$, so by
+\Cref{prop:geo-tail} no instantiation can certify a faster decay.
+
+\paragraph{Variant: biased walk.}
+For $(x \mathrel{:=} x+1) \oplus_{p} (x \mathrel{:=} x-1)$ with
+$p \in (0,1)$, $q \defsym 1-p$ and $\lambda \defsym q/p \neq 1$, the same
+scheme applies with
+\[
+  \ex(x) = \frac{\lambda^x - 1}{\lambda^N - 1},
+  \qquad
+  V(x) = A\,\lambda^{x/2} \sin\!\Bigl(\frac{\pi x}{N}\Bigr),
+  \qquad
+  \beta = 2\sqrt{pq}\,\cos\!\Bigl(\frac{\pi}{N}\Bigr),
+\]
+where $A \defsym \tfrac{N}{2}\max\bigl(1, \lambda^{-(N-1)/2}\bigr)$.
+Premise~1 holds with equality since
+$p\lambda^{x+1} + q\lambda^{x-1} = \lambda^{x}(q + p) = \lambda^x$;
+Premise~3 holds with equality since
+$p\,\lambda^{1/2} = q\,\lambda^{-1/2} = \sqrt{pq}$, whence
+$p V(x+1) + q V(x-1)
+ = \lambda^{x/2}A\sqrt{pq}\,\bigl(\sin\tfrac{\pi(x+1)}{N}
+ + \sin\tfrac{\pi(x-1)}{N}\bigr) = \beta V(x)$;
+Premise~2 follows as before from
+$A\lambda^{x/2} \geq \tfrac{N}{2}$ on $1 \leq x \leq N-1$, giving
+$V(x) \geq 1 \geq \ex(x)$; and
+$\beta \lt 1$ since $2\sqrt{pq} \leq 1$ by AM--GM (strict for
+$p \neq \tfrac12$) and $\cos(\pi/N) \lt 1$.
+
+% ----------------------------------------------------------------------
+\subsection{Negative Binomial}\label{app:bench-nb}
+% ----------------------------------------------------------------------
+
+\paragraph{Program.}
+Fix $p \in (0,1]$ and let $x, c$ range over the naturals:
+\[
+  C_{\text{nb}} \;\defsym\;
+  \WHILE{x > 0}{\;
+    \bigl((x \mathrel{:=} x-1) \oplus_{p} \SKIP\bigr);\;
+    c \mathrel{:=} c+1
+  \;}
+\]
+Each iteration succeeds with probability $p$; the loop performs $x$
+successes, so $T$ is negative binomial with $\mathbb{E}[T] = x/p$.
+
+\paragraph{Specification.}
+Take $\pred \equiv x \geq 0 \land c \geq 0$, $\bexpr \equiv x > 0$, and
+\[
+  \ex(x,c) \;\defsym\; c + \frac{x}{p}.
+\]
+The target triple certifies
+$\mathbb{E}[c_{\text{final}}] \geq c_0 + x_0/p$.
+
+\paragraph{Why the naive $V$ fails.}
+The candidate $V = \ex$ does \emph{not} satisfy Premise~3: for $x \geq 2$ no
+mass leaves the loop within one iteration and (see Premise~1 below)
+$\WP{C_{\text{body}}}{\ex} = \ex$, so $\WP{C_{\text{body}}}{\ex} \leq
+\beta\,\ex$ with $\beta \lt 1$ would force $\ex \leq 0$ --- impossible, as
+$\ex > 0$ on $\bexpr$. This is not a defect of the loop (its tail \emph{is}
+geometric) but of the candidate: the remedy is to reweight $V$ exponentially
+in $x$, trading a larger dominating function for a uniform one-step
+contraction.
+
+\paragraph{Instantiation of \textsc{While-Mult}.}
+Abbreviating $b_x \defsym (x+2)/p$,
+\[
+  V(x,c) \;\defsym\; [x \geq 1]\cdot 2^{x}\,(c + b_x),
+  \qquad
+  \beta \;\defsym\; 1 - \frac{p}{4}.
+\]
+
+\paragraph{Premise 1} (with equality; successors satisfy $\pred$):
+\[
+  \WP{C_{\text{body}}}{\ex}(x,c)
+  = p\Bigl(c+1+\frac{x-1}{p}\Bigr) + (1-p)\Bigl(c+1+\frac{x}{p}\Bigr)
+  = c + 1 + \frac{x}{p} - 1
+  = \ex(x,c).
+  \checkmark
+\]
+
+\paragraph{Premise 2} ($V \geq \ex$ on $\bexpr\land\pred$):
+$2^x \geq 1$ and $b_x \geq x/p$. $\checkmark$
+
+\paragraph{Premise 3} ($\WP{C_{\text{body}}}{V} \leq \beta V$ on
+$\bexpr\land\pred$): we distinguish whether the success branch stays in the
+loop.
+
+\emph{Case $x \geq 2$.} Using $b_{x-1} = b_x - 1/p$,
+\begin{align*}
+  \WP{C_{\text{body}}}{V}(x,c)
+  &= p\,2^{x-1}(c+1+b_{x-1}) + (1-p)\,2^{x}(c+1+b_x) \\
+  &= 2^{x}\Bigl[\tfrac{p}{2}\bigl(c+1+b_x - \tfrac1p\bigr)
+       + (1-p)(c+1+b_x)\Bigr]
+   = 2^{x}\Bigl[\bigl(1-\tfrac{p}{2}\bigr)(c+1+b_x) - \tfrac12\Bigr].
+\end{align*}
+The required bound $\leq \bigl(1-\tfrac{p}{4}\bigr)2^x(c+b_x)$ rearranges to
+\[
+  \frac{1-p}{2} \;\leq\; \frac{p}{4}\,(c + b_x),
+\]
+which holds since $c \geq 0$ and $\tfrac{p}{4}\, b_x \geq \tfrac{p}{4}\cdot
+\tfrac{4}{p} = 1 > \tfrac{1-p}{2}$. $\checkmark$
+
+\emph{Case $x = 1$} (success exits the loop; $V(0,\cdot) = 0$, $b_1 = 3/p$):
+\[
+  \WP{C_{\text{body}}}{V}(1,c)
+  = (1-p)\cdot 2\,(c+1+\tfrac{3}{p})
+  \;\overset{!}{\leq}\;
+  \bigl(1-\tfrac{p}{4}\bigr)\cdot 2\,(c+\tfrac{3}{p}).
+\]
+Comparing coefficients of $c$: $1-p \leq 1-\tfrac{p}{4}$. Comparing
+constants:
+$(1-p)\bigl(1+\tfrac{3}{p}\bigr) \leq \tfrac{3}{p} - \tfrac{3}{4}
+ \iff 1-p \leq \tfrac{9}{4}$,
+which always holds. $\checkmark$
+
+\paragraph{Premises 4 and 5.}
+$\beta = 1 - p/4 \in [\sfrac34, 1)$ for $p \in (0,1]$, and $V$ is pointwise
+finite. $\checkmark$
+
+\paragraph{Conclusion.}
+\[
+  \vdash\; \HT[lower]{x \geq 0 \land c \geq 0}{c + \tfrac{x}{p}}
+     {C_{\text{nb}}}{x = 0 \land c \geq 0}{c + \tfrac{x}{p}},
+\]
+certifying $\mathbb{E}[c_{\text{final}}] \geq c_0 + x_0/p$ --- the exact
+expected value. The certified decay rate $\beta = 1-p/4$ is coarser than the
+true tail rate $1-p$; this is harmless, as \textsc{While-Mult} only requires
+\emph{some} valid pair $(V,\beta)$, not a sharp one.
+
+% ----------------------------------------------------------------------
+\subsection{Coupon Collector}\label{app:bench-cc}
+% ----------------------------------------------------------------------
+
+\paragraph{Program.}
+We track $k \in \{0,\dots,N\}$, the number of coupons still missing, and the
+draw counter $c$; a uniform draw hits a missing coupon with probability
+$k/N$:
+\[
+  C_{\text{cc}} \;\defsym\;
+  \WHILE{k > 0}{\;
+    \bigl((k \mathrel{:=} k-1) \oplus_{k/N} \SKIP\bigr);\;
+    c \mathrel{:=} c+1
+  \;}
+\]
+Writing $\mathcal{H}_k \defsym \sum_{j=1}^{k} \sfrac{1}{j}$, the expected
+number of draws from $k$ missing coupons is $N \mathcal{H}_k$; from a fresh
+start ($k = N$) it is the classical $N \mathcal{H}_N$.
+
+\paragraph{Specification.}
+Take $\pred \equiv 0 \leq k \leq N \land c \geq 0$, $\bexpr \equiv k > 0$,
+and
+\[
+  \ex(k,c) \;\defsym\; c + N \mathcal{H}_k.
+\]
+
+\paragraph{Tail behaviour.}
+The tail is genuinely geometric with rate $1 - \sfrac1N$: fixing any single
+missing coupon gives $\Pr(T > n) \geq (1-\sfrac1N)^n$, and a union bound over
+the $k$ missing coupons gives $\Pr(T > n) \leq k\,(1-\sfrac1N)^n$. So
+\textsc{While-Mult} is the right tool; as in \Cref{app:bench-nb} the naive
+$V = \ex$ fails (for $k \geq 2$ no mass exits within one step), and we
+reweight exponentially in $k$.
+
+\paragraph{Instantiation of \textsc{While-Mult}.}
+Abbreviating $b_k \defsym N\mathcal{H}_k + N$ (so $b_{k-1} = b_k - N/k$),
+\[
+  V(k,c) \;\defsym\; [k \geq 1]\cdot 2^{k}\,(c + b_k),
+  \qquad
+  \beta \;\defsym\; 1 - \frac{1}{2N}.
+\]
+
+\paragraph{Premise 1} (with equality; successors satisfy $\pred$):
+\[
+  \WP{C_{\text{body}}}{\ex}(k,c)
+  = \frac{k}{N}\bigl(c+1+N\mathcal{H}_{k-1}\bigr)
+  + \Bigl(1-\frac{k}{N}\Bigr)\bigl(c+1+N\mathcal{H}_k\bigr)
+  = c + 1 + N\mathcal{H}_k - \frac{k}{N}\cdot\frac{N}{k}
+  = \ex(k,c).
+  \checkmark
+\]
+
+\paragraph{Premise 2.} $V \geq \ex$ on $k \geq 1$: immediate. $\checkmark$
+
+\paragraph{Premise 3} ($\WP{C_{\text{body}}}{V} \leq \beta V$ on
+$\bexpr\land\pred$):
+
+\emph{Case $k \geq 2$} (both successors in the loop):
+\begin{align*}
+  \WP{C_{\text{body}}}{V}(k,c)
+  &= \frac{k}{N}\, 2^{k-1}\Bigl(c+1+b_k-\frac{N}{k}\Bigr)
+   + \Bigl(1-\frac{k}{N}\Bigr) 2^{k}\,(c+1+b_k) \\
+  &= 2^{k}\Bigl[\Bigl(1-\frac{k}{2N}\Bigr)(c+1+b_k) - \frac12\Bigr].
+\end{align*}
+The required bound $\leq \bigl(1-\tfrac{1}{2N}\bigr)2^k(c+b_k)$ rearranges to
+\[
+  \frac12 - \frac{k}{2N}
+  \;\leq\;
+  \frac{k-1}{2N}\,(c+b_k),
+\]
+which holds since $k \geq 2$, $c \geq 0$ and
+$\tfrac{k-1}{2N}\,b_k \geq \tfrac{1}{2N}\bigl(N\mathcal{H}_2+N\bigr)
+ = \tfrac54 \geq \tfrac12$. $\checkmark$
+
+\emph{Case $k = 1$} (success exits the loop; $V(0,\cdot) = 0$, $b_1 = 2N$):
+\[
+  \WP{C_{\text{body}}}{V}(1,c)
+  = \Bigl(1-\frac1N\Bigr)\cdot 2\,(c+1+2N)
+  \;\overset{!}{\leq}\;
+  \Bigl(1-\frac{1}{2N}\Bigr)\cdot 2\,(c+2N).
+\]
+Coefficients of $c$: $1-\sfrac1N \leq 1-\sfrac{1}{2N}$. Constants:
+$(1-\sfrac1N)(2N+1) = 2N-1-\sfrac1N \leq 2N-1
+ = (1-\sfrac{1}{2N})\cdot 2N$. $\checkmark$
+
+\paragraph{Premises 4 and 5.}
+$\beta = 1-\sfrac{1}{2N} \in [0,1)$ and $V$ is pointwise finite.
+$\checkmark$
+
+\paragraph{Conclusion.}
+\[
+  \vdash\; \HT[lower]{\pred}{c + N\mathcal{H}_k}
+     {C_{\text{cc}}}{k = 0 \land c \geq 0}{c + N\mathcal{H}_k},
+\]
+certifying $\mathbb{E}[c_{\text{final}}] \geq c_0 + N\mathcal{H}_{k_0}$;
+from a fresh start, $\mathbb{E}[\text{\#draws}] \geq N \mathcal{H}_N$ ---
+the classical coupon-collector bound, again exact. The certified rate
+$1-\sfrac{1}{2N}$ is within a factor of two (in the exponent) of the true
+rate $1-\sfrac1N$.
+
+% ----------------------------------------------------------------------
+\subsection{Escaping Spline}\label{app:bench-spline}
+% ----------------------------------------------------------------------
+
+\paragraph{Program.}
+The \emph{escaping spline} (Hark et al.\ 2020), with $x$ ranging over the
+naturals:
+\[
+  C_{\text{sp}} \;\defsym\;
+  \WHILE{x > 0}{\;
+    (x \mathrel{:=} 0) \oplus_{1/(x+1)} (x \mathrel{:=} x+1)
+  \;}
+\]
+From $x \geq 1$ the loop exits in one step with probability
+$\sfrac{1}{x+1}$ and otherwise drifts upward, making the exit ever less
+likely. The tail probabilities telescope in closed form:
+\[
+  q_n(x)
+  = \prod_{i=0}^{n-1} \frac{x+i}{x+i+1}
+  = \frac{x}{x+n},
+\]
+so the loop is almost surely terminating, yet
+$\mathbb{E}[T_x] = \sum_{n \geq 0} \tfrac{x}{x+n} = \infty$: almost-sure
+termination with infinite expected runtime, the classical hard regime for
+lower bounds. (It also illustrates the finiteness caveat of
+\Cref{app:completeness}: for the counter specification the exact
+pre-expectation $H$ is infinite.)
+
+\paragraph{Specification.}
+Take $\pred \equiv x \geq 0$, $\bexpr \equiv x > 0$, and $\ex \defsym 1$.
+The target triple
+\[
+  \HT[lower]{x \geq 0}{1}{C_{\text{sp}}}{x = 0}{1}
+\]
+asserts $\WP{C_{\text{sp}}}{[x=0]\cdot 1} \geq 1$, i.e.\ almost-sure
+termination.
+
+\paragraph{\textsc{While-Mult} is provably inapplicable.}
+By \Cref{prop:geo-tail}, any instantiation would give
+$q_n(x) \leq \beta^n V(x)$ with $\beta \lt 1$ and $V(x) \lt \infty$. But
+$q_n(x) = \tfrac{x}{x+n} \geq \tfrac{x}{2n}$ for $n \geq x$, while
+$\beta^n V(x) \to 0$ geometrically --- a contradiction for $n$ large. The
+polynomial tail forces the general rule.
+
+\paragraph{Witnesses.}
+The canonical witness sequence of \Cref{app:canonical-examples} is available
+in closed form: take
+\[
+  r_n(x) \;\defsym\; [x \geq 1]\cdot\frac{x}{x+n}.
+\]
+
+\paragraph{Premise 1} (with equality; both successors satisfy $\pred$):
+\[
+  \WP{C_{\text{body}}}{[\pred]\cdot 1}(x)
+  = \frac{1}{x+1}\cdot 1 + \frac{x}{x+1}\cdot 1
+  = 1
+  \;\geq\; 1.
+  \checkmark
+\]
+
+\paragraph{Premise 2.}
+On $\bexpr\land\pred$, i.e.\ $x \geq 1$:
+$r_0(x) = \tfrac{x}{x} = 1 \geq \ex$. $\checkmark$
+
+\paragraph{Premise 3} (with equality): for $x \geq 1$, using $r_n(0) = 0$,
+\[
+  \WP{C_{\text{body}}}{r_n}(x)
+  = \frac{1}{x+1}\cdot r_n(0) + \frac{x}{x+1}\cdot r_n(x+1)
+  = \frac{x}{x+1}\cdot\frac{x+1}{x+n+1}
+  = \frac{x}{x+n+1}
+  = r_{n+1}(x).
+  \checkmark
+\]
+
+\paragraph{Premise 4.}
+For each fixed $x \geq 1$:
+$\lim_{n\to\infty} \tfrac{x}{x+n} = 0$. $\checkmark$
+
+\paragraph{Conclusion.}
+$\vdash\; \HT[lower]{x \geq 0}{1}{C_{\text{sp}}}{x = 0}{1}$: the loop
+terminates with probability $1$, certified entirely within the logic by
+elementary algebra --- every premise is discharged by a one-line computation,
+with no auxiliary termination argument. This benchmark exercises the general
+rule at full strength precisely where the derived rule provably fails.
+
+% ----------------------------------------------------------------------
+\subsection{Unbounded Symmetric Random Walk}\label{app:bench-rw}
+% ----------------------------------------------------------------------
+
+\paragraph{Program.}
+\[
+  C_{\text{rw}} \;\defsym\;
+  \WHILE{x > 0}{\;
+    (x \mathrel{:=} x-1) \oplus_{1/2} (x \mathrel{:=} x+1)
+  \;}
+\]
+The motivating example of the lower-bound literature: the walk is almost
+surely terminating (recurrence of the one-dimensional symmetric random
+walk), yet $\mathbb{E}[T_x] = \infty$ and the tail is only polynomial. By
+the classical ballot-problem identity, $q_{2m}(1) = \binom{2m}{m}4^{-m}$,
+and with the standard central-binomial bound
+$\binom{2m}{m} \geq 4^m/(2\sqrt{m})$ (together with $q_{2m-1}(1) =
+q_{2m}(1)$, as $T_1$ only takes odd values) one gets
+\[
+  q_n(1) \;\geq\; \frac{1}{2\sqrt{n}}
+  \qquad (n \geq 1).
+\]
+Hence, by \Cref{prop:geo-tail}, \textsc{While-Mult} is provably inapplicable
+to the termination triple, exactly as for the escaping spline.
+
+\paragraph{Specification.}
+$\pred \equiv x \geq 0$, $\bexpr \equiv x > 0$, $\ex \defsym 1$, and the
+target triple $\HT[lower]{x \geq 0}{1}{C_{\text{rw}}}{x = 0}{1}$
+(almost-sure termination).
+
+\paragraph{Witnesses.}
+Unlike the spline, the canonical witnesses have no elementary closed form.
+We define them by the one-step recursion
+\[
+  r_0(x) \defsym [x \geq 1],
+  \qquad
+  r_{n+1}(x) \defsym [x \geq 1]\cdot
+    \Bigl(\tfrac12\, r_n(x-1) + \tfrac12\, r_n(x+1)\Bigr),
+\]
+so that $r_n(x) = q_n(x) = \Pr(T_x > n)$ by induction on $n$.
+
+\paragraph{Premises 1--3.}
+Premise~1: $\WP{C_{\text{body}}}{[\pred]\cdot 1} = 1 \geq 1$ on
+$\bexpr\land\pred$, as both successors satisfy $\pred$. Premise~2:
+$r_0 = 1 \geq \ex$ on $x \geq 1$. Premise~3 holds \emph{with equality by
+construction}: for $x \geq 1$,
+$\WP{C_{\text{body}}}{r_n}(x) = \tfrac12 r_n(x-1) + \tfrac12 r_n(x+1)
+ = r_{n+1}(x)$. $\checkmark$
+
+\paragraph{Premise 4.}
+For fixed $x \geq 1$, $\;\lim_{n\to\infty} r_n(x) = \Pr(T_x = \infty)$, so
+Premise~4 is \emph{equivalent} to almost-sure termination of the walk. This
+is true, but it is a genuinely external fact: it must be imported, either
+from the classical recurrence argument or from a dedicated AST rule (e.g.\
+the supermartingale variant rule of McIver et al.\ 2018, or the proof rules
+of Majumdar and Sathiyanarayana 2025).
+
+\paragraph{Discussion.}
+This benchmark marks the honest boundary of the method. The canonical
+witnesses exist, Premises~1--3 hold by construction, and the entire
+difficulty of the example is concentrated in Premise~4: the rule reduces the
+quantitative statement ``the termination probability is at least $1$'' to
+the qualitative statement ``the loop terminates almost surely'', and no
+further. This is the relative-completeness phenomenon in concrete form ---
+any proof system for lower bounds must certify almost-sure termination
+somewhere, and the rule makes that dependency explicit instead of hiding it.
+Contrast with \Cref{app:bench-spline}, where the same recipe succeeded
+outright because $q_n$ admitted a closed form with a directly computable
+limit.
