@@ -1,0 +1,643 @@
+This section proves completeness for guarded judgments with arbitrary
+qualitative pre- and postconditions.  Let
+$P,Q:\Mem\to\Bool$ and $f,g:\Mem\to[0,\infty]$.  For every command $C$ and
+post-assertion $(Q\mid g)$, structural induction on $C$ derives the judgment
+whose two precomponents are semantically exact: the qualitative component is
+$\WP{C}{Q}$ and the quantitative component is $\WP{C}{g}$.  A final use of
+\textsc{Consequence} then derives every semantically valid judgment
+$\HT{P}{f}{C}{Q}{g}$.
+
+Throughout,
+\[
+  \bowtie\ \in\ \{\,\leq,=,\geq\,\}
+\]
+denotes the lower, equality, or upper judgment relation. The induction is
+carried out once, for an arbitrary $\bowtie$.
+
+\subsubsection{Exactly what is proved}
+
+For every command $C$, predicates $P,Q$, and expectations $f,g$, we prove
+\begin{equation}
+  \valid\HT{P}{f}{C}{Q}{g}
+  \quad\Longrightarrow\quad
+  \vdash\HT{P}{f}{C}{Q}{g}.
+  \label{eq:cook-target}
+\end{equation}
+By the typed validity definition \eqref{eq:cook-validity-typed}, the premise of
+\eqref{eq:cook-target} means
+\begin{equation}
+  \forall m\in\Mem.\quad
+  P(m)\Longrightarrow
+  \bigl(\WP{C}{Q}(m)\land
+        f(m)\bowtie\WP{C}{g}(m)\bigr),
+  \label{eq:cook-general-validity}
+\end{equation}
+or, equivalently,
+\begin{equation}
+  P\models \WP{C}{Q}\land f\bowtie\WP{C}{g}.
+  \label{eq:cook-general-validity-entailment}
+\end{equation}
+The proof proceeds through the following exact-pre judgment:
+\begin{equation}
+  \vdash
+  \HT{\WP{C}{Q}}{\WP{C}{g}}{C}{Q}{g}
+  \label{eq:cook-general-exact-pre-target}
+\end{equation}
+Here $\WP{C}{Q}$ is the exact qualitative precondition for $Q$, and
+$\WP{C}{g}$ is the exact quantitative pre-expectation of $g$.  Once
+\eqref{eq:cook-general-exact-pre-target} has been derived, the desired judgment
+follows by \textsc{Consequence}:
+\begin{equation}
+\frac{
+  \begin{gathered}
+    P\models\WP{C}{Q}\land f\bowtie\WP{C}{g}
+    \\[1mm]
+    \vdash\HT{\WP{C}{Q}}{\WP{C}{g}}{C}{Q}{g}
+    \\[1mm]
+    Q\models Q\land g\bowtie g
+  \end{gathered}
+}{
+  \vdash\HT{P}{f}{C}{Q}{g}
+}\;\textsc{Consequence}.
+\label{eq:cook-general-final-consequence-outline}
+\end{equation}
+The first premise is \eqref{eq:cook-general-validity-entailment}, the second is
+the exact-pre judgment, and the third holds by reflexivity.  It therefore
+suffices to prove \eqref{eq:cook-general-exact-pre-target} by structural
+induction on $C$.
+
+\subsubsection{The rules and semantic equations used}
+
+The \textsc{Skip}, \textsc{Assign}, \textsc{Sample}, \textsc{Seq}, and
+\textsc{If} rules are those in \Cref{fig:hoare:l-u}.  They are parameterised
+by $\bowtie$ and therefore cover lower, equality, and upper judgments at once.
+
+\paragraph{The guarded consequence rule.}
+Following the actual guarded consequence rule and the notation in the rest of
+this note, we use
+\begin{equation}
+\frac{
+  P\models P'\land f\bowtie f'
+  \qquad
+  \vdash\HT{P'}{f'}{C}{Q'}{g'}
+  \qquad
+  Q'\models Q\land g'\bowtie g
+}{
+  \vdash\HT{P}{f}{C}{Q}{g}
+}\;\textsc{Consequence}.
+\label{eq:cook-consequence}
+\end{equation}
+For $\bowtie={\leq}$ this is the lower rule, for $\bowtie={=}$ the equality
+rule, and for $\bowtie={\geq}$ the upper rule.  The first comparison is
+required on the new pre-guard $P$, and the last comparison is required on the
+source post-guard $Q'$.  Every use of \textsc{Consequence} below is displayed
+in this three-premise form with all entries already instantiated.
+
+\paragraph{Semantic equations.}
+The expectation semantics gives
+\begin{align}
+  \WP{\SKIP}{g} &= g,
+  \label{eq:cook-wp-skip}\\
+  \WP{\vx <- \expr}{g} &= g[\vx\mapped\expr],
+  \label{eq:cook-wp-assign}\\
+  \WP{\vx <* \sexpr}{g}
+    &= \E{\sexpr}{\lambda\val.\,g[\vx\mapped\val]},
+  \label{eq:cook-wp-sample}\\
+  \WP{C_1;C_2}{g}
+    &= \WP{C_1}{\WP{C_2}{g}},
+  \label{eq:cook-wp-seq}\\
+  \WP{\ITE{B}{C_1}{C_2}}{g}
+    &= [B]\cdot\WP{C_1}{g}
+       +[\neg B]\cdot\WP{C_2}{g}.
+  \label{eq:cook-wp-if}
+\end{align}
+These equations follow from the denotational clauses above rather than being
+additional proof rules: the first four follow from the return and bind laws,
+and the conditional equation follows by splitting on $B(m)$.
+
+For $L=\WHILE B\DO D$, define
+\begin{equation}
+  \Phi_g(X)\defsym[B]\cdot\WP{D}{X}+[\neg B]\cdot g.
+  \label{eq:cook-loop-functional}
+\end{equation}
+The loop semantics used in this note is
+\begin{equation}
+  \WP{L}{g}=\operatorname{lfp}(\Phi_g)
+  =\sup_{n\geq0}\Phi_g^n(0).
+  \label{eq:cook-loop-lfp}
+\end{equation}
+
+We assume that the exact preconditions, pre-expectations, and loop residuals
+used below are expressible, and that the background assertion theory proves
+the required semantic equalities and inequalities.  The loop case additionally
+uses monotonicity, Scott continuity, and additivity of $\mathsf{wp}$.  Its exact
+pre-expectation is assumed finite-valued so that residual subtraction never
+forms $\infty-\infty$.
+
+\subsubsection{The exact-pre lemma}
+
+\begin{lemma}[Exact-pre judgments]
+\label{lem:exact-pre-derivable}
+For every command $C$, every postcondition $Q$, every post-expectation $g$ in
+the expressive, finitary fragment, and each
+$\bowtie\in\{\leq,=,\geq\}$,
+\begin{equation}
+  \vdash\HT{\WP{C}{Q}}{\WP{C}{g}}{C}{Q}{g}.
+  \label{eq:cook-exact-bowtie}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+The proof is by structural induction on $C$, with $Q$, $g$, and $\bowtie$
+universally quantified.
+
+\paragraph{Case: skip.}
+
+The typed weakest-precondition equations are
+\[
+  \WP{\SKIP}{Q}=Q,
+  \qquad
+  \WP{\SKIP}{g}=g.
+\]
+Hence \textsc{Skip} gives
+\[
+\frac{}{\vdash\HT{Q}{g}{\SKIP}{Q}{g}}\;\textsc{Skip},
+\]
+which is \eqref{eq:cook-exact-bowtie} after rewriting both precomponents.
+
+\paragraph{Case: assignment.}
+
+The typed assignment equations are
+\[
+  \WP{\vx <- \expr}{Q}=Q[\vx\mapped\expr],
+  \qquad
+  \WP{\vx <- \expr}{g}=g[\vx\mapped\expr].
+\]
+The required instance of \textsc{Assign} is
+\[
+\frac{}{
+  \vdash\HT{Q[\vx\mapped\expr]}{g[\vx\mapped\expr]}
+    {\vx <- \expr}{Q}{g}
+}\;\textsc{Assign}.
+\]
+Rewriting its two precomponents proves \eqref{eq:cook-exact-bowtie}.
+
+\paragraph{Case: sampling.}
+
+The typed sampling equations are
+\[
+  \WP{\vx <* \sexpr}{Q}
+  =\forall\val\in\supp(\sexpr).\ Q[\vx\mapped\val],
+  \qquad
+  \WP{\vx <* \sexpr}{g}
+  =\E{\sexpr}{\lambda\val.\,g[\vx\mapped\val]}.
+\]
+Thus \textsc{Sample} gives
+\[
+\frac{}{
+  \vdash\HT{\forall\val\in\supp(\sexpr).\ Q[\vx\mapped\val]}
+    {\E{\sexpr}{\lambda\val.\,g[\vx\mapped\val]}}
+    {\vx <* \sexpr}{Q}{g}
+}\;\textsc{Sample}.
+\]
+Rewriting its two precomponents proves \eqref{eq:cook-exact-bowtie}.
+
+\paragraph{Case: sequential composition.}
+
+Define
+\[
+  R\defsym\WP{C_2}{Q},
+  \qquad
+  h\defsym\WP{C_2}{g}.
+\]
+The two induction hypotheses are
+\[
+  \vdash\HT{R}{h}{C_2}{Q}{g},
+  \qquad
+  \vdash\HT{\WP{C_1}{R}}{\WP{C_1}{h}}{C_1}{R}{h}.
+\]
+They are exactly the two premises of \textsc{Seq}:
+\begin{equation}
+\frac{
+  \vdash\HT{\WP{C_1}{R}}{\WP{C_1}{h}}{C_1}{R}{h}
+  \qquad
+  \vdash\HT{R}{h}{C_2}{Q}{g}
+}{
+  \vdash\HT{\WP{C_1}{R}}{\WP{C_1}{h}}{C_1;C_2}{Q}{g}
+}\;\textsc{Seq}.
+\label{eq:cook-seq-derivation}
+\end{equation}
+The composition equations
+\[
+  \WP{C_1;C_2}{Q}=\WP{C_1}{R},
+  \qquad
+  \WP{C_1;C_2}{g}=\WP{C_1}{h}
+\]
+rewrite the conclusion to \eqref{eq:cook-exact-bowtie}.
+
+\paragraph{Case: $C$ is a conditional on $B$.}
+
+The structurally smaller commands are $C_1$ and $C_2$.  Fix $g$ and define
+\begin{equation}
+  H\defsym[B]\cdot\WP{C_1}{g}
+    +[\neg B]\cdot\WP{C_2}{g}.
+  \label{eq:cook-if-H}
+\end{equation}
+By \eqref{eq:cook-wp-if},
+\begin{equation}
+  H=\WP{\ITE{B}{C_1}{C_2}}{g}.
+  \label{eq:cook-if-H-wp}
+\end{equation}
+The indicator semantics gives
+\begin{align}
+  B&\models H=\WP{C_1}{g},
+  \label{eq:cook-if-true}\\
+  \neg B&\models H=\WP{C_2}{g}.
+  \label{eq:cook-if-false}
+\end{align}
+These are semantic facts, not induction hypotheses or syntactic judgments.
+
+For the arbitrary relation $\bowtie$, the two IHs are
+\begin{align}
+  &\vdash\HT{\top}{\WP{C_1}{g}}{C_1}{\top}{g},
+  \label{eq:cook-if-IH-one}\\
+  &\vdash\HT{\top}{\WP{C_2}{g}}{C_2}{\top}{g}.
+  \label{eq:cook-if-IH-two}
+\end{align}
+
+\paragraph{The true branch by \textsc{Consequence}.}
+Substitute
+\[
+  P=B,\quad f=H,\quad P'=\top,\quad f'=\WP{C_1}{g},
+  \quad Q'=Q=\top,\quad g'=g
+\]
+in \eqref{eq:cook-consequence}.  The complete rule instance is
+\begin{equation}
+\frac{
+  \begin{array}{c}
+    B\models\top\land H\bowtie\WP{C_1}{g}
+    \qquad
+    \vdash\HT{\top}{\WP{C_1}{g}}{C_1}{\top}{g}
+    \\[1mm]
+    \top\models\top\land g\bowtie g
+  \end{array}
+}{
+  \vdash\HT{B}{H}{C_1}{\top}{g}
+}\;\textsc{Consequence}.
+\label{eq:cook-if-conseq-true}
+\end{equation}
+The middle premise is IH~\eqref{eq:cook-if-IH-one}.  The first premise holds
+because $B\models\top$ and \eqref{eq:cook-if-true} is an equality, hence it
+implies each of $H\leq\WP{C_1}{g}$, $H=\WP{C_1}{g}$, and
+$H\geq\WP{C_1}{g}$.  The last premise holds by reflexivity.  Thus the same
+displayed derivation is valid for all three choices of $\bowtie$.
+
+\paragraph{The false branch by \textsc{Consequence}.}
+Now substitute
+\[
+  P=\neg B,\quad f=H,\quad P'=\top,
+  \quad f'=\WP{C_2}{g},
+  \quad Q'=Q=\top,\quad g'=g.
+\]
+The complete rule instance is
+\begin{equation}
+\frac{
+  \begin{array}{c}
+    \neg B\models\top\land H\bowtie\WP{C_2}{g}
+    \qquad
+    \vdash\HT{\top}{\WP{C_2}{g}}{C_2}{\top}{g}
+    \\[1mm]
+    \top\models\top\land g\bowtie g
+  \end{array}
+}{
+  \vdash\HT{\neg B}{H}{C_2}{\top}{g}
+}\;\textsc{Consequence}.
+\label{eq:cook-if-conseq-false}
+\end{equation}
+The middle premise is IH~\eqref{eq:cook-if-IH-two}; the first follows from
+the semantic equality \eqref{eq:cook-if-false}; and the last is reflexive.
+
+\paragraph{Application of \textsc{If}.}
+The conclusions of \eqref{eq:cook-if-conseq-true} and
+\eqref{eq:cook-if-conseq-false} fill the two branch premises of
+\textsc{If}:
+\begin{equation}
+\frac{
+  \vdash\HT{B}{H}{C_1}{\top}{g}
+  \qquad
+  \vdash\HT{\neg B}{H}{C_2}{\top}{g}
+}{
+  \vdash\HT{\top}{H}{\ITE{B}{C_1}{C_2}}{\top}{g}
+}\;\textsc{If}.
+\label{eq:cook-if-derivation}
+\end{equation}
+The branch guards are $B\land\top=B$ and
+$\neg B\land\top=\neg B$.  Finally,
+\eqref{eq:cook-if-H-wp} rewrites $H$ to the exact pre-expectation.  This
+proves the conditional case simultaneously for
+$\bowtie\in\{\leq,=,\geq\}$.
+
+\paragraph{Case: $C$ is a loop $L$ with guard $B$ and body $D$.}
+
+\noindent\todo{TODO (equality case for while): Add an
+equality-introduction rule combining the exact lower and upper loop judgments,
+or provide a dedicated equality while rule. Until then, the derivations below
+establish the two inequalities but do not yet construct the syntactic $[=]$
+judgment.}\par
+
+The only structurally smaller command is the body $D$.  Fix $g$ and define
+\[
+  W\defsym\WP{L}{g}.
+\]
+This is the semantic loop invariant: it is the exact expected value of $g$
+after the whole loop.
+
+\paragraph{Semantic fixed-point facts.}
+Let
+\[
+  K_0\defsym0,
+  \qquad
+  K_{n+1}\defsym\Phi_g(K_n).
+\]
+By \eqref{eq:cook-loop-lfp} and Scott continuity,
+\begin{equation}
+  K_n\uparrow W,
+  \qquad
+  W=\Phi_g(W).
+  \label{eq:cook-loop-kleene}
+\end{equation}
+Unfolding $\Phi_g$ and evaluating indicators gives the semantic equalities
+\begin{align}
+  B&\models W=\WP{D}{W},
+  \label{eq:cook-loop-on-B}\\
+  \neg B&\models W=g,
+  \label{eq:cook-loop-on-not-B}\\
+  B&\models K_{n+1}=\WP{D}{K_n}\qquad(n\geq0).
+  \label{eq:cook-approximant-on-B}
+\end{align}
+None of these equalities is itself a syntactic Hoare derivation.
+
+\paragraph{The body judgment, once for all three relations.}
+The IH for $D$, instantiated at post-expectation $W$ and arbitrary relation
+$\bowtie$, is
+\begin{equation}
+  \vdash\HT{\top}{\WP{D}{W}}{D}{\top}{W}.
+  \label{eq:cook-loop-body-IH}
+\end{equation}
+Substitute
+\[
+  P=B,\quad f=W,\quad P'=\top,\quad f'=\WP{D}{W},
+  \quad Q'=Q=\top,\quad g'=W
+\]
+in \textsc{Consequence}.  This gives the full rule instance
+\begin{equation}
+\frac{
+  \begin{array}{c}
+    B\models\top\land W\bowtie\WP{D}{W}
+    \qquad
+    \vdash\HT{\top}{\WP{D}{W}}{D}{\top}{W}
+    \\[1mm]
+    \top\models\top\land W\bowtie W
+  \end{array}
+}{
+  \vdash\HT{B}{W}{D}{\top}{W}
+}\;\textsc{Consequence}.
+\label{eq:cook-loop-body-bowtie}
+\end{equation}
+The first premise follows from equality \eqref{eq:cook-loop-on-B}, the middle
+premise is IH~\eqref{eq:cook-loop-body-IH}, and the last premise is reflexive.
+The lower instance of \eqref{eq:cook-loop-body-bowtie} will be Premise~1 of
+\textsc{While-lb}; its upper instance will be the body premise of
+\textsc{While-ub}.
+
+\paragraph{Residual witnesses for the lower loop rule.}
+Because $K_n\uparrow W$, we have $0\leq K_n\leq W$.  Finiteness of $W$
+allows us to define
+\begin{equation}
+  r_n\defsym W-K_n.
+  \label{eq:cook-residual-definition}
+\end{equation}
+Each $r_n$ is a non-negative, finite-valued expectation.
+
+\paragraph{Lower Premise 1.}
+Instantiate \textsc{While-lb} with qualitative loop invariant $P:=\top$ and
+quantitative loop invariant $W$.  Its first premise is
+\[
+  \vdash\HT[lower]{B}{W}{D}{\top}{W},
+\]
+which is exactly the $\bowtie={\leq}$ instance of
+\eqref{eq:cook-loop-body-bowtie}. 
+
+\paragraph{Lower Premise 2.}
+The second premise is the semantic side condition
+\[
+  B\models r_0\geq W.
+\]
+Since $K_0=0$, definition \eqref{eq:cook-residual-definition} gives
+$r_0=W-K_0=W$.  Hence $B\models r_0=W\geq W$.
+
+\paragraph{Semantic residual equation for Lower Premise 3.}
+For every $n$,
+\begin{equation}
+  B\models r_{n+1}=\WP{D}{r_n}.
+  \label{eq:cook-residual-step}
+\end{equation}
+Indeed, $W=K_n+r_n$.  Additivity of $\mathsf{wp}$ gives
+\[
+  \WP{D}{W}=\WP{D}{K_n}+\WP{D}{r_n}.
+\]
+On $B$, equations \eqref{eq:cook-loop-on-B} and
+\eqref{eq:cook-approximant-on-B} turn this into
+\[
+  W=K_{n+1}+\WP{D}{r_n}.
+\]
+Definition \eqref{eq:cook-residual-definition} also gives
+$W=K_{n+1}+r_{n+1}$.  All terms are finite-valued, so cancellation yields
+\eqref{eq:cook-residual-step}.  The equality appears because the chosen
+$r_n=W-K_n$ is the \emph{exact} residual, not merely an arbitrary upper bound.
+Premise~3 of \textsc{While-lb} only needs
+$B\models r_{n+1}\geq\WP{D}{r_n}$, so
+\eqref{eq:cook-residual-step} is a strictly stronger semantic fact.  It is not
+yet a syntactic judgment; the required upper judgment is derived next.
+
+\paragraph{Lower Premise 3.}
+Fix an arbitrary $n$.  The upper IH for $D$, instantiated at post-expectation
+$r_n$, is
+\begin{equation}
+  \vdash\HT[upper]{\top}{\WP{D}{r_n}}{D}{\top}{r_n}.
+  \label{eq:cook-loop-residual-upper-IH}
+\end{equation}
+Substituting
+\[
+  P=B,\quad f=r_{n+1},\quad P'=\top,
+  \quad f'=\WP{D}{r_n},
+  \quad Q'=Q=\top,\quad g'=r_n,
+  \quad\bowtie={\geq}
+\]
+in \textsc{Consequence} gives
+\begin{equation}
+\frac{
+  \begin{array}{c}
+    B\models\top\land r_{n+1}\geq\WP{D}{r_n}
+    \qquad
+    \vdash\HT[upper]{\top}{\WP{D}{r_n}}{D}{\top}{r_n}
+    \\[1mm]
+    \top\models\top\land r_n\geq r_n
+  \end{array}
+}{
+  \vdash\HT[upper]{B}{r_{n+1}}{D}{\top}{r_n}
+}\;\textsc{Consequence}.
+\label{eq:cook-loop-residual-conseq}
+\end{equation}
+The first premise follows from \eqref{eq:cook-residual-step}, the middle one
+is IH~\eqref{eq:cook-loop-residual-upper-IH}, and the last is reflexive.
+This use of \textsc{Consequence} is essential: the IH has pre-guard $\top$ and
+pre-expectation $\WP{D}{r_n}$, whereas the premise required by
+\textsc{While-lb} has pre-guard $B$ and pre-expectation $r_{n+1}$.  The first
+side condition performs exactly these two adaptations under the assumption
+$B$.
+Because $n$ was arbitrary, this derives
+\[
+  \forall n\geq0.\quad
+  \vdash\HT[upper]{B}{r_{n+1}}{D}{\top}{r_n}.
+\]
+
+\paragraph{Lower Premise 4.}
+The fourth premise is
+\[
+  B\models\lim_{n\to\infty}r_n=0.
+\]
+By \eqref{eq:cook-loop-kleene}, $K_n\uparrow W$.  Since $W$ is finite-valued,
+pointwise
+\[
+  \lim_{n\to\infty}r_n
+  =\lim_{n\to\infty}(W-K_n)
+  =W-\lim_{n\to\infty}K_n
+  =W-W=0.
+\]
+The equality holds on all states and thus on $B$.
+
+\paragraph{Application of \textsc{While-lb}.}
+The four established premises fill the lower loop rule as follows:
+\begin{equation}
+\frac{
+  \begin{array}{c}
+    \vdash\HT[lower]{B}{W}{D}{\top}{W}
+    \qquad
+    B\models r_0\geq W
+    \\[1mm]
+    \forall n.\ \vdash\HT[upper]{B}{r_{n+1}}{D}{\top}{r_n}
+    \qquad
+    B\models\lim_{n\to\infty}r_n=0
+  \end{array}
+}{
+  \vdash\HT[lower]{\top}{W}{L}{\neg B}{W}
+}\;\textsc{While-lb}.
+\label{eq:cook-loop-lower-canonical}
+\end{equation}
+
+\paragraph{Application of \textsc{While-ub}.}
+The $\bowtie={\geq}$ instance of \eqref{eq:cook-loop-body-bowtie} is
+\[
+  \vdash\HT[upper]{B}{W}{D}{\top}{W}.
+\]
+It is exactly the body premise obtained by taking $P=\top$ and $v=W$ in the
+canonical upper loop rule:
+\begin{equation}
+\frac{
+  \vdash\HT[upper]{B}{W}{D}{\top}{W}
+}{
+  \vdash\HT[upper]{\top}{W}{L}{\neg B}{W}
+}\;\textsc{While-ub}.
+\label{eq:cook-loop-upper-canonical}
+\end{equation}
+
+\paragraph{The common final consequence step.}
+Equations \eqref{eq:cook-loop-lower-canonical} and
+\eqref{eq:cook-loop-upper-canonical} establish, for the corresponding choice
+of $\bowtie$,
+\[
+  \vdash\HT{\top}{W}{L}{\neg B}{W}.
+\]
+Both are converted to the desired post-assertion by the same fully
+instantiated consequence rule:
+\begin{equation}
+\frac{
+  \top\models\top\land W\bowtie W
+  \qquad
+  \vdash\HT{\top}{W}{L}{\neg B}{W}
+  \qquad
+  \neg B\models\top\land W\bowtie g
+}{
+  \vdash\HT{\top}{W}{L}{\top}{g}
+}\;\textsc{Consequence}.
+\label{eq:cook-loop-final-conseq}
+\end{equation}
+The first premise is reflexive.  The middle premise comes from
+\textsc{While-lb} when $\bowtie={\leq}$ and from \textsc{While-ub} when
+$\bowtie={\geq}$.  The last premise follows from
+$\neg B\models W=g$ in \eqref{eq:cook-loop-on-not-B}; equality implies both
+directions of $\bowtie$.  Since $W=\WP{L}{g}$ by definition, the conclusion
+of \eqref{eq:cook-loop-final-conseq} is the exact-pre judgment for the loop.
+This closes the lower and upper branches of the structural induction; the
+equality branch is the explicit TODO recorded at the start of this case.
+\end{proof}
+
+\subsubsection{From the exact pre-expectation to every valid lower bound}
+
+\begin{theorem}[Completeness for lower bounds]
+\label{thm:cook-relative-completeness}
+For every command $C$ and expectations $f,g$ in the expressive, finitary
+fragment,
+\[
+  \valid\HT[lower]{\top}{f}{C}{\top}{g}
+  \quad\Longrightarrow\quad
+  \vdash\HT[lower]{\top}{f}{C}{\top}{g}.
+\]
+\end{theorem}
+
+\begin{proof}
+Assume
+\[
+  \valid\HT[lower]{\top}{f}{C}{\top}{g}.
+\]
+By semantic validity, the qualitative obligation
+$\supp(C_m)\subseteq\top$ is automatic, while the quantitative obligation is
+\[
+  \forall m.\quad
+  f(m)\leq\E{C,m}{[\top]\cdot g}.
+\]
+Because $[\top]=1$, definition \eqref{eq:cook-wp-definition} reduces it to
+\begin{equation}
+  f\leq\WP{C}{g}.
+  \label{eq:cook-valid-bound}
+\end{equation}
+The $\bowtie={\leq}$ instance of the exact-pre lemma gives
+\begin{equation}
+  \vdash\HT[lower]{\top}{\WP{C}{g}}{C}{\top}{g}.
+  \label{eq:cook-final-exact}
+\end{equation}
+Now substitute
+\[
+  P=P'=Q'=Q=\top,
+  \quad f'=\WP{C}{g},
+  \quad g'=g,
+  \quad\bowtie={\leq}
+\]
+in \textsc{Consequence}.  The complete final rule instance is
+\begin{equation}
+\frac{
+  \top\models\top\land f\leq\WP{C}{g}
+  \qquad
+  \vdash\HT[lower]{\top}{\WP{C}{g}}{C}{\top}{g}
+  \qquad
+  \top\models\top\land g\leq g
+}{
+  \vdash\HT[lower]{\top}{f}{C}{\top}{g}
+}\;\textsc{Consequence}.
+\label{eq:cook-final-consequence}
+\end{equation}
+The first premise is \eqref{eq:cook-valid-bound}, the middle premise is
+\eqref{eq:cook-final-exact}, and the last premise is reflexive.  The
+conclusion is exactly the desired derivability statement.
+\end{proof}

@@ -208,8 +208,192 @@ the trapped mass --- to vanish in the limit.
 \appendix
 
 % ======================================================================
-\section{Soundness of the \textsc{While} Rule}\label{app:while-soundness}
+\section{Soundness and Completeness}\label{app:soundness-completeness}
 % ======================================================================
+
+\subsection{Foundations}\label{app:foundations}
+
+This subsection makes explicit the typed semantic objects used by both the
+soundness and the completeness arguments below.
+
+\paragraph{Memories, predicates, and expectations.}
+Let $\Mem$ be the set of program memories.  Predicates and expectations have
+different codomains:
+\begin{equation}
+  P,Q:\Mem\to\Bool,
+  \qquad
+  f,g:\Mem\to[0,\infty].
+  \label{eq:cook-semantic-types}
+\end{equation}
+All comparisons between expectations are pointwise; for example,
+$f\leq g$ abbreviates $\forall m\in\Mem.\ f(m)\leq g(m)$.
+
+\paragraph{Commands and distribution semantics.}
+The command language considered below is
+\begin{equation}
+  C ::= \SKIP
+  \mid \vx <- \expr
+  \mid \vx <* \sexpr
+  \mid C_1;C_2
+  \mid \ITE{B}{C_1}{C_2}
+  \mid \WHILE B\DO D.
+  \label{eq:cook-command-syntax}
+\end{equation}
+Every command denotes a subdistribution-valued state transformer
+\begin{equation}
+  \llbracket C\rrbracket:
+  \Mem\longrightarrow\mathcal D_{\leq1}(\Mem).
+  \label{eq:cook-command-semantics-type}
+\end{equation}
+Subdistributions are used because non-termination may lose probability mass.
+Two operations build every distribution used below, based on Avanzini
+et al.\ [2024], Section~4. For $v\in\Mem$, write $\delta_v$ for
+the \emph{point (Dirac) distribution} at $v$,
+\begin{equation}
+  \delta_v(m) \;\defsym\;
+  \begin{cases} 1 & m=v, \\ 0 & \text{otherwise,}\end{cases}
+\end{equation}
+and define $\operatorname{return}(v)\in\mathcal D_{\leq1}(\Mem)$ by
+\begin{equation}
+  \operatorname{return}(v) \;\defsym\; \delta_v.
+  \label{eq:cook-return-def}
+\end{equation}
+Given $\mu\in\mathcal D_{\leq1}(\Mem)$ and a family
+$K:\Mem\to\mathcal D_{\leq1}(\Mem)$, the \emph{(monadic) sequencing}
+operation $\operatorname{bind}(\mu,K)\in\mathcal D_{\leq1}(\Mem)$ mixes the
+continuations $K(x)$ according to $\mu$:
+\begin{equation}
+  \operatorname{bind}(\mu,K)(m) \;\defsym\;
+  \sum_{x\in\operatorname{supp}(\mu)} \mu(x)\cdot K(x)(m).
+  \label{eq:cook-bind-def}
+\end{equation}
+With these two operations, the clauses needed most directly below include
+\begin{align}
+  \llbracket\SKIP\rrbracket(m)
+    &=\operatorname{return}(m),
+  \label{eq:cook-denote-skip}\\
+  \llbracket\vx <- \expr\rrbracket(m)
+    &=\operatorname{return}\bigl(m[\vx\mapped\expr(m)]\bigr),
+  \label{eq:cook-denote-assign}\\
+  \llbracket\vx <* \sexpr\rrbracket(m)
+    &=\operatorname{bind}\bigl(\sexpr(m),
+       \lambda v.\operatorname{return}(m[\vx\mapped v])\bigr),
+  \label{eq:cook-denote-sample}\\
+  \llbracket C_1;C_2\rrbracket(m)
+    &=\operatorname{bind}\bigl(\llbracket C_1\rrbracket(m),
+       \lambda m'.\llbracket C_2\rrbracket(m')\bigr).
+  \label{eq:cook-denote-seq}\\
+  \llbracket\ITE{B}{C_1}{C_2}\rrbracket(m)
+    &=
+      \begin{cases}
+        \llbracket C_1\rrbracket(m),&B(m),\\
+        \llbracket C_2\rrbracket(m),&\neg B(m).
+      \end{cases}
+  \label{eq:cook-denote-if}
+\end{align}
+For the loop, let $X:\Mem\to\mathcal D_{\leq1}(\Mem)$ and define the kernel
+functional
+\begin{equation}
+  \mathcal F_{B,D}(X)(m)
+  \defsym
+  \begin{cases}
+    \operatorname{bind}(\llbracket D\rrbracket(m),X),&B(m),\\
+    \operatorname{return}(m),&\neg B(m).
+  \end{cases} 
+  \label{eq:cook-denote-loop-functional}
+\end{equation}
+Then
+\begin{equation}
+  \llbracket\WHILE B\DO D\rrbracket
+  \defsym\operatorname{lfp}(\mathcal F_{B,D})
+  \label{eq:cook-denote-loop}
+\end{equation}
+in the pointwise order on subdistribution kernels.
+
+For a subdistribution $\mu$ and a non-negative function $h$, write
+$\mathbb E_{x\sim\mu}[h(x)]\defsym\sum_{x\in\Mem}\mu(x)h(x)$ for its
+expectation. Two elementary laws, used repeatedly below, follow directly
+from the definitions of $\operatorname{return}$
+(\ref{eq:cook-return-def}) and $\operatorname{bind}$
+(\ref{eq:cook-bind-def}). The first is immediate, since
+$\operatorname{return}(v)$ puts all its mass on $v$:
+\begin{equation}
+  \mathbb E_{x\sim\operatorname{return}(v)}[h(x)]
+    =\sum_{x\in\Mem}\operatorname{return}(v)(x)\,h(x)
+    =h(v).
+  \label{eq:cook-expect-return}
+\end{equation}
+The second follows by unfolding $\operatorname{bind}$ and swapping the
+order of summation:
+\begin{align}
+  \mathbb E_{y\sim\operatorname{bind}(\mu,K)}[h(y)]
+    &=\sum_{y\in\Mem}\operatorname{bind}(\mu,K)(y)\,h(y)
+    =\sum_{y\in\Mem}\sum_{x\in\Mem}\mu(x)\,K(x)(y)\,h(y)\\
+    &=\sum_{x\in\Mem}\mu(x)\sum_{y\in\Mem}K(x)(y)\,h(y)
+    =\mathbb E_{x\sim\mu}
+       \left[\mathbb E_{y\sim K(x)}[h(y)]\right].
+  \label{eq:cook-expect-bind}
+\end{align}
+The second equation is the law of iterated expectation for sequential
+composition; all sums involved are of non-negative terms, so the
+rearrangement is justified regardless of convergence.
+
+\paragraph{The weakest-precondition operator.}
+A single operator $\WP{C}{\cdot}$ is used throughout, applied either to an
+expectation or to a predicate; which of the two defining equations applies
+is determined by the type of the argument --- no separate notation is
+introduced for the two cases:
+\begin{align}
+  \WP{C}{g}(m)
+    &\defsym
+      \mathbb E_{m'\sim\llbracket C\rrbracket(m)}[g(m')],
+    &&g:\Mem\to[0,\infty],
+  \label{eq:cook-wp-definition}\\
+  \WP{C}{Q}(m)
+    &\defsym
+      \forall m'\in\supp(\llbracket C\rrbracket(m)).\ Q(m'),
+    &&Q:\Mem\to\Bool.
+  \label{eq:cook-gwp-definition}
+\end{align}
+Applied to an expectation, $\WP{C}{g}$ is quantitative: it returns the exact
+expected value of $g$ after running $C$. Applied to a predicate, $\WP{C}{Q}$
+is the ordinary (liberal) weakest precondition, expressing that every
+reachable output state satisfies $Q$.
+
+The return and bind laws give the corresponding equations for the predicate
+case,
+\begin{equation}
+  \WP{\SKIP}{Q}=Q,
+  \qquad
+  \WP{C_1;C_2}{Q}
+  =\WP{C_1}{\WP{C_2}{Q}}.
+  \label{eq:cook-gwp-basic-laws}
+\end{equation}
+The identical-looking equations for the expectation case are
+\eqref{eq:cook-wp-skip} and \eqref{eq:cook-wp-seq} below; both pairs are
+instances of the same return/bind laws, one for each type of argument.
+
+\paragraph{Semantic validity versus syntactic derivability.}
+For $\bowtie\in\{\leq,=,\geq\}$, semantic validity of a guarded judgment is
+\begin{equation}
+  \valid\HT{P}{f}{C}{Q}{g}
+  \quad\Longleftrightarrow\quad
+  \forall m\in\Mem.\ P(m)\Longrightarrow{}
+  \bigl(\WP{C}{Q}(m) \land f(m)\bowtie\WP{C}{g}(m)\bigr).
+  \label{eq:cook-validity-typed}
+\end{equation}
+The first conjunct is qualitative: every output state in the support
+satisfies $Q$. The second is quantitative: $f$ has the required relation to
+the exact expected value of $g$. The two conjuncts are not independent: since
+the first conjunct forces $[Q]=1$ on the whole output support, it gives
+$\mathbb E[[Q]\cdot g]=\mathbb E[g]$, so \eqref{eq:cook-validity-typed} is
+equivalent to the validity definition used at the start of the paper, which
+weights $g$ by $[Q]$ explicitly instead of stating support-inclusion as a
+separate conjunct. Throughout the rest of this section, $\vDash$ denotes
+semantic truth and $\vdash$ denotes derivability from the displayed proof
+rules.
+
+\subsection{Soundness of the While Rule}\label{app:while-soundness}
 
 \paragraph{Goal.}
 We want to show that the \textsc{While-lb} rule of \Cref{fig:hoare:while-lb}
@@ -393,218 +577,342 @@ giving:
 \]
 which is exactly the desired conclusion. \qed
 
+\subsection{Completeness via Exact Pre-Expectations}\label{app:completeness-cook}
 
-
-\noindent\makebox[\linewidth]{\rule{\textwidth}{0.4pt}}
-% ======================================================================
-\section{Completeness}\label{app:completeness}
-% ======================================================================
-
-The witness premises of \Cref{fig:hoare:while-lb} should not rule out a
-semantically valid lower bound merely because the appropriate witnesses are
-not given in advance.  The following theorem makes this precise for loops
-whose exact pre-expectation is finite.
-
-\begin{theorem}[Finite-witness completeness of \textsc{While-lb}]
-\label{thm:while-lb-completeness}
-Define
-\[
-  H \defsym
-  \WP{\WHILE\bexpr\DO\cmd}{[\neg\bexpr\land\pred]\cdot\ex}.
-\]
-Assume that:
-\begin{enumerate}
-  \item the invariant premise
-  $\HT[lower]{\bexpr\land\pred}{\ex}{\cmd}{\pred}{\ex}$ holds;
-  \item the desired lower bound is semantically valid, and hence
-  $[\pred]\cdot\ex\leq H$; and
-  \item $H$ is finite-valued.
-\end{enumerate}
-Then there exists a sequence of non-negative, finite-valued expectations
-$\{r_n\}_{n\geq0}$ satisfying Premises~2--4 of
-\Cref{fig:hoare:while-lb}.  Hence all premises of the rule are satisfied and
-it derives
-\[
-  \HT[lower]{\pred}{\ex}{\WHILE\bexpr\DO\cmd}{\neg\bexpr\land\pred}{\ex}.
-\]
-\end{theorem}
-
-\begin{proof}
-Consider the finite-loop approximants
-\[
-  I_0 \defsym [\neg\bexpr\land\pred]\cdot\ex,
-  \qquad
-  I_{n+1} \defsym [\bexpr]\cdot\WP{\cmd}{I_n}
-  +[\neg\bexpr\land\pred]\cdot\ex.
-\]
-By the least-fixed-point semantics of the loop,
-\[
-  I_n \uparrow H
-  \qquad\text{and}\qquad
-  H=[\bexpr]\cdot\WP{\cmd}{H}
-  +[\neg\bexpr\land\pred]\cdot\ex.
-\]
-In particular, $0\leq I_n\leq H$.  Since $H$ is finite-valued, the pointwise
-differences
-\[
-  r_n \defsym H-I_n
-\]
-are well-defined non-negative, finite-valued expectations.  Intuitively,
-$I_n$ is the post-expectation already collected by the $n$th approximant and
-$r_n$ is the part that remains to be collected.
-
-\paragraph{Premise 2.}
-On states satisfying $\bexpr\land\pred$,
-\begin{align*}
-  I_0
-  &= [\neg\bexpr\land\pred]\cdot\ex = 0, \\
-  r_0
-  &= H-I_0 = H, \\
-  [\bexpr\land\pred]\cdot r_0
-  &= [\bexpr\land\pred]\cdot H \\
-  &\geq [\bexpr\land\pred]\cdot\ex.
-\end{align*}
-The final inequality is Assumption~2 restricted to states in which the loop
-guard is true.  Thus $r_0$ contains at least the entire lower bound $\ex$
-before any loop iteration has been approximated.
-
-\paragraph{Premise 3.}
-Since $H=I_n+r_n$ and all three expectations are finite-valued, additivity of
-$\WP{\cmd}{\cdot}$ and the two recursive equations give, on states satisfying
-$\bexpr$,
-\begin{align*}
-  \WP{\cmd}{H}
-  &= \WP{\cmd}{I_n}+\WP{\cmd}{r_n}, \\
-  r_{n+1}
-  &= H-I_{n+1} \\
-  &= \bigl(\WP{\cmd}{H}
-      +[\neg\bexpr\land\pred]\cdot\ex\bigr)
-     -\bigl(\WP{\cmd}{I_n}
-      +[\neg\bexpr\land\pred]\cdot\ex\bigr) \\
-  &= \WP{\cmd}{H}-\WP{\cmd}{I_n} \\
-  &= \WP{\cmd}{r_n}.
-\end{align*}
-Consequently,
-\[
-  \valid
-  \HT[upper]{\bexpr\land\pred}{r_{n+1}}{\cmd}{\top}{r_n}
-\]
-holds with equality in its quantitative condition.  Its qualitative
-condition is immediate because its postcondition is $\top$.  Intuitively, one
-execution of the body transforms the mass remaining after the $n$th
-approximant into exactly the mass remaining after the $(n+1)$st approximant.
-
-\paragraph{Premise 4.}
-Because $I_n\uparrow H$ and $H$ is finite-valued,
-\begin{align*}
-  \lim_{n\to\infty}r_n
-  &= \lim_{n\to\infty}(H-I_n) \\
-  &= H-\lim_{n\to\infty}I_n \\
-  &= H-H = 0.
-\end{align*}
-Hence
-\[
-  \bexpr\land\pred \valid \lim_{n\to\infty}r_n=0.
-\]
-Thus the part of the post-expectation not yet captured by the finite
-approximants vanishes in the limit.
-Premise~1 holds by Assumption~1, so the conclusion follows by an application
-of \textsc{While-lb}.
-\end{proof}
-
-\paragraph{Remark on finiteness.}
-Assumption~3 is needed by this canonical construction.  If $H$ is allowed to
-take the value $\infty$, then $H-I_n$ may contain the undefined expression
-$\infty-\infty$.  This does not mean that \textsc{While-lb} cannot prove any
-infinite-valued specification; it means only that such a proof may require a
-different witness sequence.
-
-
-% \section{Completeness}\label{app:completeness}
-% % ======================================================================
-
-% \paragraph{Goal.}
-% For every command $C$ and expectations $g, f$:
-% \[
-%   \models \HT[lower]{}{g}{C}{}{f}
-%   \;\implies\;
-%   \vdash \HT[lower]{}{g}{C}{}{f}
-% \]
-
-% \paragraph{Strategy (Cook-style).} The proof uses two lemmas:
-% \[
-%   \textbf{(L1)}\ \vdash \HT[lower]{}{\WP{C}{f}}{C}{}{f}
-%   \qquad\qquad
-%   \textbf{(L2)}\ \models \HT[lower]{}{g}{C}{}{f} \;\implies\; \vdash \HT[lower]{}{g}{C}{}{f}
-% \]
-% (L2) is a single Weaken step given (L1).  The substance is in (L1), proved by structural induction on $C$.  The non-while cases are routine; we give the while case.
-
-% % ----------------------------------------------------------------------
-% \subsection*{Lemma (L1), while case: $C = \WHILE\bexpr\DO\cmd$}
-
-% \noindent\textbf{Definitions.}
-% \[
-%   W \defsym \WP{\WHILE\bexpr\DO\cmd}{f}, \qquad
-%   F(X) \defsym [\bexpr]\cdot\WP{\cmd}{X} + [\neg\bexpr]\cdot f, \qquad
-%   r_i \defsym W - F^i(0).
-% \]
-
-% % \noindent Two facts follow immediately.
-% % \begin{itemize}
-% %   \item \emph{Fixpoint:} $W = F(W)$, hence $\WP{\cmd}{W} = W$ on $\bexpr$ and $W = f$ on $\neg\bexpr$.
-% %   \item \emph{Kleene:} $F^i(0) \uparrow W$ pointwise, hence $r_i \downarrow 0$ and $r_0 = W$.
-% % \end{itemize}
-
-% \medskip
-% \noindent\textbf{Derivation.}
-% \[
-% \infer[\rllabelstyle{Weaken-post}]{%
-%   \vdash \HT[lower]{}{W}{\WHILE\bexpr\DO\cmd}{}{f}%
-% }{%
-%   \infer[\rllabelstyle{While-lb}]{%
-%     \vdash \HT[lower]{}{W}{\WHILE\bexpr\DO\cmd}{\neg\bexpr}{W}%
-%   }{%
-%     \infer[\rllabelstyle{Weaken-pre}]{%
-%       \vdash \HT[lower]{\bexpr}{W}{\cmd}{\top}{W}%
-%     }{%
-%       \text{IH: } \vdash \HT[lower]{}{\WP{\cmd}{W}}{\cmd}{}{W}%
-%     }
-%     &
-%     \begin{array}[b]{l}
-%       r_0 = W \geq W \;\;(\text{P2}) \\[2pt]
-%       \WP{\cmd}{r_i} = r_{i+1} \;\;(\text{P3, by linearity}) \\[2pt]
-%       \lim_{i \to \infty} r_i \;=\; 0 \;\;(\text{P4, Kleene})
-%     \end{array}
-%   }%
-% }
-% \]
-
-% \noindent
-% Weaken-pre uses $\WP{\cmd}{W} = W$ on $\bexpr$ (fixpoint). \\
-% Weaken-post uses $W = f$ on $\neg\bexpr$ (fixpoint). \\
-% P3 holds because $r_{i+1} = W - F^{i+1}(0) = \WP{\cmd}{W} - \WP{\cmd}{F^i(0)} = \WP{\cmd}{r_i}$ on $\bexpr$ (linearity).
-
-% \[
-%   \therefore \quad \vdash \HT[lower]{}{\WP{\WHILE\bexpr\DO\cmd}{f}}{\WHILE\bexpr\DO\cmd}{}{f}
-%   \quad \checkmark
-% \]
-
-% % ----------------------------------------------------------------------
-% \subsection*{Lemma (L2): Completeness}
-
-% \[
-% \infer[\rllabelstyle{Weaken-pre}]{%
-%   \vdash \HT[lower]{}{g}{C}{}{f}%
-% }{%
-%   \text{(L1): } \vdash \HT[lower]{}{\WP{C}{f}}{C}{}{f}%
-%   &
-%   \models \HT[lower]{}{g}{C}{}{f} \;\Rightarrow\; g \leq \WP{C}{f}%
-% }
-% \]
-% \hfill$\qed$
+\input{completeness-cook}
 
 \input{derived-rules.tex}
 
+
+% ======================================================================
+\section{Control Operators}%
+\label{app:labeled-jumps}
+% ======================================================================
+
+\paragraph{Results.}
+\[
+  \ell\in\mathsf{Lab},
+  \qquad
+  \mathsf{Res}\ a::=\mathsf{Ok}(a)\mid\mathsf{Jump}(\ell,m),
+\]
+\[
+  \mathsf{Ok}:a\to\mathsf{Res}\ a,
+  \qquad
+  \mathsf{Jump}:\mathsf{Lab}\to\Mem\to\mathsf{Res}\ a,
+  \qquad
+  \llbracket C\rrbracket:\Mem\to\mathcal D_{\leq1}(\mathsf{Res}\ \Mem).
+\]
+The missing probability mass represents non-termination.
+
+\paragraph{Semantics.}
+\begin{align*}
+  \llbracket \vx <- \expr\rrbracket(m)
+  &=\operatorname{return}
+    \bigl(\mathsf{Ok}(m[\vx\mapped\expr(m)])\bigr),\\
+  \llbracket\mathsf{jump}\ \ell\rrbracket(m)
+  &=\operatorname{return}\bigl(\mathsf{Jump}(\ell,m)\bigr).
+\end{align*}
+\begin{equation}
+  \llbracket C;D\rrbracket(m)
+  =\operatorname{bind}\left(\llbracket C\rrbracket(m),\
+  \lambda r.\,
+  \begin{cases}
+    \llbracket D\rrbracket(m'),&r=\mathsf{Ok}(m'),\\
+    \operatorname{return}(\mathsf{Jump}(\ell,m')),
+      &r=\mathsf{Jump}(\ell,m')
+  \end{cases}\right)
+  \label{eq:lj-sem-seq}
+\end{equation}
+\begin{equation}
+  \llbracket\ell\{C\}\rrbracket(m)
+  =\operatorname{bind}\left(\llbracket C\rrbracket(m),\
+  \lambda r.\,
+  \begin{cases}
+    \operatorname{return}(\mathsf{Ok}(m')),
+      &r=\mathsf{Ok}(m'),\\
+    \operatorname{return}(\mathsf{Ok}(m')),
+      &r=\mathsf{Jump}(\ell,m'),\\
+    \operatorname{return}(\mathsf{Jump}(\ell',m')),
+      &r=\mathsf{Jump}(\ell',m'),\ \ell'\neq\ell
+  \end{cases}\right)
+  \label{eq:lj-sem-label}
+\end{equation}
+
+\paragraph{Label environments.}
+\[
+  \mathsf{Pred}\defsym\Mem\to\Bool,
+  \qquad
+  \mathsf{Exp}\defsym\Mem\to[0,\infty].
+\]
+\[
+  G:\mathsf{Lab}\to\mathsf{Pred},
+  \qquad
+  E:\mathsf{Lab}\to\mathsf{Exp}.
+\]
+The notation $G\mid E$ pairs the predicate and expectation
+environments, as in a guarded assertion $\{P\mid f\}$.
+
+\paragraph{Weakest pre-expectation and weakest guard.}
+For a post-expectation $g:\mathsf{Exp}$ and a postcondition
+$Q:\mathsf{Pred}$, the functions
+$(E;\mathsf{Ok}\mapsto g):\mathsf{Res}\ \Mem\to[0,\infty]$ and
+$(G;\mathsf{Ok}\mapsto Q):\mathsf{Res}\ \Mem\to\Bool$ read off a result with
+$g$ (resp.\ $Q$) on a normal exit and with the environment on a jump:
+\begin{equation}
+  (E;\mathsf{Ok}\mapsto g)(r)
+  \defsym
+  \begin{cases}
+    g(m'),&r=\mathsf{Ok}(m'),\\
+    E(\ell)(m'),&r=\mathsf{Jump}(\ell,m'),
+  \end{cases}
+  \qquad
+  (G;\mathsf{Ok}\mapsto Q)(r)
+  \defsym
+  \begin{cases}
+    Q(m'),&r=\mathsf{Ok}(m'),\\
+    G(\ell)(m'),&r=\mathsf{Jump}(\ell,m').
+  \end{cases}
+  \label{eq:ljwp-okmap}
+\end{equation}
+The two transformers $\mathrm{ewp}_{E}[C]:\mathsf{Exp}\to\mathsf{Exp}$
+and $\mathrm{wp}_{G}[C]:\mathsf{Pred}\to\mathsf{Pred}$ are
+\begin{equation}
+  \mathrm{ewp}_{E}[C](g)(m)
+  \defsym
+  \mathbb E_{r\sim\llbracket C\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr],
+  \label{eq:ljwp-wp}
+\end{equation}
+\begin{equation}
+  \mathrm{wp}_{G}[C](Q)(m)
+  \defsym
+  \forall r\in\supp(\llbracket C\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(r).
+  \label{eq:ljwp-wpG}
+\end{equation}
+Nontermination is not in the support, so $\mathrm{wp}_{G}$ is liberal.
+\paragraph{Semantic validity.}
+\begin{equation}
+  \begin{aligned}
+  &\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}\\
+  &\qquad\iff
+  \forall m.\ P(m)\Longrightarrow
+  \mathrm{wp}_{G}[C](Q)(m)
+  \ \land\
+  f(m)\mathrel{\bowtie}\mathrm{ewp}_{E}[C](g)(m).
+  \end{aligned}
+  \label{eq:ljwp-validity}
+\end{equation}
+
+\begin{lemma}[Basic equations]\label{lem:ljwp-equations}
+For all $E,G,g,Q$, commands $C,D$ and labels $\ell$:
+\begin{align}
+  \mathrm{ewp}_{E}[\vx <- \expr](g)(m)&=g(m[\vx\mapped\expr(m)]),
+  &\mathrm{wp}_{G}[\vx <- \expr](Q)(m)&=Q(m[\vx\mapped\expr(m)]),
+  \label{eq:ljwp-assign}\\
+  \mathrm{ewp}_{E}[\mathsf{jump}\ \ell](g)&=E(\ell),
+  &\mathrm{wp}_{G}[\mathsf{jump}\ \ell](Q)&=G(\ell),
+  \label{eq:ljwp-jump}\\
+  \mathrm{ewp}_{E}[C;D](g)&=\mathrm{ewp}_{E}[C]\bigl(\mathrm{ewp}_{E}[D](g)\bigr),
+  &\mathrm{wp}_{G}[C;D](Q)&=\mathrm{wp}_{G}[C]\bigl(\mathrm{wp}_{G}[D](Q)\bigr),
+  \label{eq:ljwp-seq}\\
+  \mathrm{ewp}_{E}[\ell\{C\}](g)&=\mathrm{ewp}_{E[\ell\mapsto g]}[C](g),
+  &\mathrm{wp}_{G}[\ell\{C\}](Q)&=\mathrm{wp}_{G[\ell\mapsto Q]}[C](Q).
+  \label{eq:ljwp-label}
+\end{align}
+\end{lemma}
+\begin{proof}
+Fix $m$. The proofs only use two facts about $\operatorname{return}$: for
+every $v\in\mathsf{Res}\ \Mem$, $h:\mathsf{Res}\ \Mem\to[0,\infty]$ and
+$\varphi:\mathsf{Res}\ \Mem\to\Bool$,
+\begin{equation}
+  \mathbb E_{r\sim\operatorname{return}(v)}[h(r)]=h(v),
+  \qquad
+  \bigl(\forall r\in\supp(\operatorname{return}(v)).\ \varphi(r)\bigr)
+  \iff\varphi(v).
+  \label{eq:lj-return}
+\end{equation}
+The first is \eqref{eq:cook-expect-return}, whose derivation does not
+depend on $\Mem$ and therefore holds verbatim over $\mathsf{Res}\ \Mem$; the
+second holds because $\supp(\operatorname{return}(v))=\{v\}$.
+
+\smallskip\noindent\emph{Assignment.}
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[\vx <- \expr](g)(m)
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{r\sim\llbracket \vx <- \expr\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\text{sem.}}{=}
+  \mathbb E_{r\sim\operatorname{return}(\mathsf{Ok}(m[\vx\mapped\expr(m)]))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-return}}{=}
+  (E;\mathsf{Ok}\mapsto g)\bigl(\mathsf{Ok}(m[\vx\mapped\expr(m)])\bigr)\\
+  &\overset{\eqref{eq:ljwp-okmap}}{=}
+  g(m[\vx\mapped\expr(m)]),
+  \end{aligned}
+\]
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\vx <- \expr](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall r\in\supp(\llbracket \vx <- \expr\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\text{sem.}}{\iff}
+  \forall r\in\supp\bigl(\operatorname{return}(\mathsf{Ok}(m[\vx\mapped\expr(m)]))\bigr).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-return}}{\iff}
+  (G;\mathsf{Ok}\mapsto Q)\bigl(\mathsf{Ok}(m[\vx\mapped\expr(m)])\bigr)\\
+  &\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  Q(m[\vx\mapped\expr(m)]).
+  \end{aligned}
+\]
+
+\smallskip\noindent\emph{Jump.}
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[\mathsf{jump}\ \ell](g)(m)
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{r\sim\llbracket \mathsf{jump}\ \ell\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\text{sem.}}{=}
+  \mathbb E_{r\sim\operatorname{return}(\mathsf{Jump}(\ell,m))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-return}}{=}
+  (E;\mathsf{Ok}\mapsto g)\bigl(\mathsf{Jump}(\ell,m)\bigr)\\
+  &\overset{\eqref{eq:ljwp-okmap}}{=}
+  E(\ell)(m),
+  \end{aligned}
+\]
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\mathsf{jump}\ \ell](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall r\in\supp(\llbracket \mathsf{jump}\ \ell\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\text{sem.}}{\iff}
+  \forall r\in\supp\bigl(\operatorname{return}(\mathsf{Jump}(\ell,m))\bigr).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-return}}{\iff}
+  (G;\mathsf{Ok}\mapsto Q)\bigl(\mathsf{Jump}(\ell,m)\bigr)\\
+  &\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  G(\ell)(m).
+  \end{aligned}
+\]
+Neither $g$ nor $Q$ appears in the result, since $\mathsf{jump}\ \ell$
+never terminates normally.
+
+\smallskip\noindent\emph{Sequence and label.}
+\todo{TODO: Proofs to be added.}
+\end{proof}
+
+\paragraph{Rules and their soundness.}
+
+\paragraph{Assignment.}
+For a predicate $Q$ and an expectation $g$ write
+$Q[\vx\mapped\expr](m)\defsym Q(m[\vx\mapped\expr(m)])$ and
+$g[\vx\mapped\expr](m)\defsym g(m[\vx\mapped\expr(m)])$.
+\[
+  \frac{}{
+    G\mid E\vdash
+    \{Q[\vx\mapped\expr]\mid g[\vx\mapped\expr]\}_{\bowtie}\
+    \vx <- \expr\
+    \{Q\mid g\}
+  }
+  \;\textsc{Assign}
+\]
+
+\begin{lemma}[\textsc{Assign}]\label{lem:ljwp-assign}
+$\models G\mid E\vdash
+\{Q[\vx\mapped\expr]\mid g[\vx\mapped\expr]\}_{\bowtie}\
+\vx <- \expr\ \{Q\mid g\}$.
+\end{lemma}
+\noindent\todo{TODO: Proof to be rewritten in the new notation.}
+
+\paragraph{Jump.}
+A jump never ends normally, so the postcondition $\{Q\mid g\}$ plays no
+role.
+\[
+  \frac{
+    \forall m.\ P(m)\Longrightarrow G(\ell)(m)
+    \qquad
+    \forall m.\ P(m)\Longrightarrow
+      f(m)\mathrel{\bowtie}E(\ell)(m)
+  }{
+    G\mid E\vdash
+    \{P\mid f\}_{\bowtie}\ \mathsf{jump}\ \ell\ \{Q\mid g\}
+  }
+  \;\textsc{Jump}
+\]
+
+\begin{lemma}[\textsc{Jump}]\label{lem:ljwp-jump}
+If both premises of \textsc{Jump} hold, then
+$\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ \mathsf{jump}\ \ell\ \{Q\mid g\}$.
+\end{lemma}
+\noindent\todo{TODO: Proof to be rewritten in the new notation.}
+
+\paragraph{Sequence.}
+The intermediate assertion $\{R\mid h\}$ connects the two premises: $R$
+holds after every normal exit of $C$, and $h$ is the value carried from
+$C$ to $D$ at that point. Jumps out of $C$ skip $D$ and are handled by the
+shared environment $G\mid E$.
+\[
+  \frac{
+    G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{R\mid h\}
+    \qquad
+    G\mid E\vdash\{R\mid h\}_{\bowtie}\ D\ \{Q\mid g\}
+  }{
+    G\mid E\vdash\{P\mid f\}_{\bowtie}\ C;D\ \{Q\mid g\}
+  }
+  \;\textsc{Seq}
+\]
+
+\begin{lemma}[\textsc{Seq}]\label{lem:ljwp-seq}
+If $\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{R\mid h\}$ and
+$\models G\mid E\vdash\{R\mid h\}_{\bowtie}\ D\ \{Q\mid g\}$, then
+$\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ C;D\ \{Q\mid g\}$.
+\end{lemma}
+\noindent\todo{TODO: Proof to be rewritten in the new notation.}
+
+\paragraph{Label.}
+Inside $\ell\{C\}$, a jump to $\ell$ ends the block normally. So in the
+premise the label $\ell$ is given the postcondition itself: guard $Q$ and
+weight $g$. Jumps to other labels keep their guard and weight from
+$G\mid E$.
+\[
+  \frac{
+    G[\ell\mapsto Q]\mid E[\ell\mapsto g]\vdash
+    \{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}
+  }{
+    G\mid E\vdash
+    \{P\mid f\}_{\bowtie}\ \ell\{C\}\ \{Q\mid g\}
+  }
+  \;\textsc{Label}
+\]
+
+\begin{lemma}[\textsc{Label}]\label{lem:ljwp-label}
+If $\models G[\ell\mapsto Q]\mid E[\ell\mapsto g]\vdash
+\{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}$, then
+$\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ \ell\{C\}\ \{Q\mid g\}$.
+\end{lemma}
+\noindent\todo{TODO: Proof to be rewritten in the new notation.}
+
+\begin{theorem}[Soundness for labeled jumps]\label{thm:lj-soundness}
+If $G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}$ is derivable with
+the rules \textsc{Assign}, \textsc{Jump}, \textsc{Seq} and \textsc{Label},
+then $\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}$.
+\end{theorem}
+\begin{proof}
+By induction on the derivation. The last rule used is one of the four
+rules above, and its lemma
+(\Cref{lem:ljwp-assign,lem:ljwp-jump,lem:ljwp-seq,lem:ljwp-label}) shows
+that the conclusion is valid, provided its premises are. For \textsc{Seq}
+and \textsc{Label}, the premises are judgments, valid by the induction
+hypothesis (for \textsc{Label}, in the environment
+$G[\ell\mapsto Q]\mid E[\ell\mapsto g]$). For \textsc{Jump}, the premises
+are conditions on memories that hold by assumption, and \textsc{Assign}
+has no premises.
+\end{proof}
 
 \noindent\makebox[\linewidth]{\rule{\textwidth}{0.4pt}}
 
@@ -755,6 +1063,6 @@ At $x>0$ (i.e.\ $B\land P$):
 For any fixed $x$, $[x>n]=0$ for all $n\geq x$, so
 $\lim_{n\to\infty} r_n(x,c) = 0$.
 
-\input{benchmarks.tex}
+% \input{benchmarks.tex}
 
 \end{document}
