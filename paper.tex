@@ -438,7 +438,7 @@ it aborts. Define:
 \begin{proof}
 By induction on $n$.
 
-\medskip\noindent\textbf{Base case $n=0$.}
+\paragraph{Base case $n=0$.}
 \begin{align*}
   I_0
   &= \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex} \\
@@ -450,7 +450,7 @@ By induction on $n$.
 where we used $\WP{\ABORT}{\cdot} = 0$ and
 $[\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] = [\pred \wedge \neg\bexpr]$.
 
-\medskip\noindent\textbf{Inductive step $n \to n+1$.}
+\paragraph{Inductive step $n \to n+1$.}
 Since $(\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^{n+1}
  = \kwd{if}\ \bexpr\ \kwd{then}\ \cmd
    \mathbin{;} (\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^n$, we have
@@ -489,7 +489,7 @@ for all $n \geq 0$:
 \begin{proof}
 By induction on $n$.
 
-\medskip\noindent\textbf{Base case $n = 0$.}
+\paragraph{Base case $n = 0$.}
 \[
   [\pred] \cdot I_0 + [\pred] \cdot r_0
   \;=\; [\pred \wedge \neg\bexpr] \cdot \ex + [\pred] \cdot r_0
@@ -500,7 +500,7 @@ By premise~(b), $[\pred] \cdot r_0 \geq [\pred \wedge \bexpr] \cdot \ex$, so:
   \;=\; [\pred] \cdot \ex
 \]
 
-\medskip\noindent\textbf{Inductive step $n \to n+1$.}
+\paragraph{Inductive step $n \to n+1$.}
 Expanding $I_{n+1}$ by \Cref{lem:In-recursion} and multiplying by $[\pred]$:
 \begin{align*}
   [\pred] \cdot I_{n+1} + [\pred] \cdot r_{n+1}
@@ -589,6 +589,24 @@ which is exactly the desired conclusion. \qed
 \label{app:labeled-jumps}
 % ======================================================================
 
+\subsection{Syntax and Semantics}\label{app:lj-semantics}
+
+\paragraph{Syntax.}
+The command language extends \eqref{eq:cook-command-syntax} with jumps
+and labeled blocks:
+\begin{equation}
+  C ::= \SKIP
+  \mid \vx <- \expression{e}
+  \mid \vx <* \sexpr
+  \mid C_1;C_2
+  \mid \ITE{\bexpr}{C_1}{C_2}
+  \mid \WHILE \bexpr\DO C
+  \mid \mathsf{jump}\ \ell
+  \mid \ell\{C\}.
+  \label{eq:lj-syntax}
+\end{equation}
+\todo{TODO: semantics, equations, rule and soundness for $\mathsf{while}$.}
+
 \paragraph{Results.}
 \[
   \ell\in\mathsf{Lab},
@@ -605,22 +623,49 @@ which is exactly the desired conclusion. \qed
 The missing probability mass represents non-termination.
 
 \paragraph{Semantics.}
-\begin{align*}
-  \llbracket \vx <- \expr\rrbracket(m)
+For a distribution expression $\sexpr$, $\sexpr(m)$ is a subdistribution
+over values.
+\begin{align}
+  \llbracket\SKIP\rrbracket(m)
+  &=\operatorname{return}\bigl(\mathsf{Ok}(m)\bigr),
+  \label{eq:lj-sem-skip}\\
+  \llbracket \vx <- \expression{e}\rrbracket(m)
   &=\operatorname{return}
-    \bigl(\mathsf{Ok}(m[\vx\mapped\expr(m)])\bigr),\\
+    \bigl(\mathsf{Ok}(m[\vx\mapped\expression{e}(m)])\bigr),
+  \label{eq:lj-sem-assign}\\
+  \llbracket \vx <* \sexpr\rrbracket(m)
+  &=\operatorname{bind}\bigl(\sexpr(m),\
+    \lambda v.\,\operatorname{return}(\mathsf{Ok}(m[\vx\mapped v]))\bigr),
+  \label{eq:lj-sem-sample}\\
+  \llbracket\ITE{\bexpr}{C_1}{C_2}\rrbracket(m)
+  &=\begin{cases}
+      \llbracket C_1\rrbracket(m),&\bexpr(m),\\
+      \llbracket C_2\rrbracket(m),&\neg\bexpr(m),
+    \end{cases}
+  \label{eq:lj-sem-if}\\
   \llbracket\mathsf{jump}\ \ell\rrbracket(m)
   &=\operatorname{return}\bigl(\mathsf{Jump}(\ell,m)\bigr).
-\end{align*}
+  \label{eq:lj-sem-jump}
+\end{align}
+For $\mu:\mathcal D_{\leq1}(\mathsf{Res}\ a)$ and
+$k:a\to\mathcal D_{\leq1}(\mathsf{Res}\ b)$, the bind of the result monad
+runs $k$ on a normal result and passes a jump through unchanged:
 \begin{equation}
-  \llbracket C;D\rrbracket(m)
-  =\operatorname{bind}\left(\llbracket C\rrbracket(m),\
+  \mathrm{dlet}_{\mathrm{RM}}\ x\leftarrow\mu\ \mathrm{in}\ k(x)
+  \defsym
+  \operatorname{bind}\left(\mu,\
   \lambda r.\,
   \begin{cases}
-    \llbracket D\rrbracket(m'),&r=\mathsf{Ok}(m'),\\
+    k(a'),&r=\mathsf{Ok}(a'),\\
     \operatorname{return}(\mathsf{Jump}(\ell,m')),
       &r=\mathsf{Jump}(\ell,m')
-  \end{cases}\right)
+  \end{cases}\right).
+  \label{eq:lj-dlet}
+\end{equation}
+\begin{equation}
+  \llbracket C;D\rrbracket(m)
+  =\mathrm{dlet}_{\mathrm{RM}}\ m'\leftarrow\llbracket C\rrbracket(m)\
+  \mathrm{in}\ \llbracket D\rrbracket(m').
   \label{eq:lj-sem-seq}
 \end{equation}
 \begin{equation}
@@ -638,6 +683,8 @@ The missing probability mass represents non-termination.
   \label{eq:lj-sem-label}
 \end{equation}
 
+\subsection{Weakest Pre-Expectation and Weakest Guard}\label{app:lj-wp}
+
 \paragraph{Label environments.}
 \[
   \mathsf{Pred}\defsym\Mem\to\Bool,
@@ -651,29 +698,46 @@ The missing probability mass represents non-termination.
 \]
 The notation $G\mid E$ pairs the predicate and expectation
 environments, as in a guarded assertion $\{P\mid f\}$.
+Updating an environment at a label $\ell$ is written
+\begin{align}
+  E[\ell\mapsto g](\ell')
+  &\defsym
+  \begin{cases}
+    g,&\ell'=\ell,\\
+    E(\ell'),&\ell'\neq\ell,
+  \end{cases}
+  \nonumber\\
+  G[\ell\mapsto Q](\ell')
+  &\defsym
+  \begin{cases}
+    Q,&\ell'=\ell,\\
+    G(\ell'),&\ell'\neq\ell.
+  \end{cases}
+  \label{eq:lj-envupd}
+\end{align}
 
-\paragraph{Weakest pre-expectation and weakest guard.}
+\paragraph{Transformers.}
 For a post-expectation $g:\mathsf{Exp}$ and a postcondition
 $Q:\mathsf{Pred}$, the functions
 $(E;\mathsf{Ok}\mapsto g):\mathsf{Res}\ \Mem\to[0,\infty]$ and
 $(G;\mathsf{Ok}\mapsto Q):\mathsf{Res}\ \Mem\to\Bool$ read off a result with
 $g$ (resp.\ $Q$) on a normal exit and with the environment on a jump:
-\begin{equation}
+\begin{align}
   (E;\mathsf{Ok}\mapsto g)(r)
-  \defsym
+  &\defsym
   \begin{cases}
     g(m'),&r=\mathsf{Ok}(m'),\\
     E(\ell)(m'),&r=\mathsf{Jump}(\ell,m'),
   \end{cases}
-  \qquad
+  \nonumber\\
   (G;\mathsf{Ok}\mapsto Q)(r)
-  \defsym
+  &\defsym
   \begin{cases}
     Q(m'),&r=\mathsf{Ok}(m'),\\
     G(\ell)(m'),&r=\mathsf{Jump}(\ell,m').
   \end{cases}
   \label{eq:ljwp-okmap}
-\end{equation}
+\end{align}
 The two transformers $\mathrm{ewp}_{E}[C]:\mathsf{Exp}\to\mathsf{Exp}$
 and $\mathrm{wp}_{G}[C]:\mathsf{Pred}\to\mathsf{Pred}$ are
 \begin{equation}
@@ -690,7 +754,6 @@ and $\mathrm{wp}_{G}[C]:\mathsf{Pred}\to\mathsf{Pred}$ are
   (G;\mathsf{Ok}\mapsto Q)(r).
   \label{eq:ljwp-wpG}
 \end{equation}
-Nontermination is not in the support, so $\mathrm{wp}_{G}$ is liberal.
 \paragraph{Semantic validity.}
 \begin{equation}
   \begin{aligned}
@@ -704,78 +767,402 @@ Nontermination is not in the support, so $\mathrm{wp}_{G}$ is liberal.
   \label{eq:ljwp-validity}
 \end{equation}
 
-\begin{lemma}[Basic equations]\label{lem:ljwp-equations}
-For all $E,G,g,Q$, commands $C,D$ and labels $\ell$:
+\subsection{Monad Facts}\label{app:lj-monad}
+
+For sets $X,Y$, $v\in X$, $\mu\in\mathcal D_{\leq1}(X)$,
+$K:X\to\mathcal D_{\leq1}(Y)$, $h:X\to[0,\infty]$, $h':Y\to[0,\infty]$,
+$\varphi:X\to\Bool$ and $\varphi':Y\to\Bool$:
+\begin{equation}
+  \begin{aligned}
+  \mathbb E_{r\sim\operatorname{return}(v)}[h(r)]&=h(v),\\
+  \bigl(\forall r\in\supp(\operatorname{return}(v)).\ \varphi(r)\bigr)
+  &\iff\varphi(v),
+  \end{aligned}
+  \label{eq:lj-return}
+\end{equation}
+\begin{equation}
+  \begin{aligned}
+  \mathbb E_{s\sim\operatorname{bind}(\mu,K)}[h'(s)]
+  &=\mathbb E_{r\sim\mu}\bigl[\mathbb E_{s\sim K(r)}[h'(s)]\bigr],\\
+  \bigl(\forall s\in\supp(\operatorname{bind}(\mu,K)).\ \varphi'(s)\bigr)
+  &\iff
+  \forall r\in\supp(\mu).\ \forall s\in\supp(K(r)).\ \varphi'(s).
+  \end{aligned}
+  \label{eq:lj-bind}
+\end{equation}
+The expectation equations are \eqref{eq:cook-expect-return} and
+\eqref{eq:cook-expect-bind}, whose derivations do not depend on $\Mem$.
+For the support equivalences, recall $\supp(\mu)=\{x\mid\mu(x)>0\}$, the
+set of outcomes that can actually occur. Since $\operatorname{return}(v)$
+puts all its mass on $v$, we have $\supp(\operatorname{return}(v))=\{v\}$.
+For $\operatorname{bind}(\mu,K)$, an outcome $s$ can occur exactly when
+some first outcome $r$ of $\mu$ can occur and $s$ can occur after it:
+\[
+  s\in\supp(\operatorname{bind}(\mu,K))
+  \iff
+  \exists r\in\supp(\mu).\ s\in\supp(K(r)).
+\]
+Indeed, $\operatorname{bind}(\mu,K)(s)=\sum_{r}\mu(r)\,K(r)(s)$ is a sum of
+non-negative numbers, so it is positive iff one of its terms
+$\mu(r)\,K(r)(s)$ is positive, i.e.\ iff $\mu(r)>0$ and $K(r)(s)>0$ for
+some $r$. Consequently, a property holds for every outcome of
+$\operatorname{bind}(\mu,K)$ iff, for every outcome $r$ of $\mu$, it holds
+for every outcome of $K(r)$, which is the second line of
+\eqref{eq:lj-bind}.
+
+\begin{lemma}[$\mathrm{dlet}_{\mathrm{RM}}$]\label{lem:lj-dlet}
+For all $E,G$, $g:\mathsf{Exp}$, $Q:\mathsf{Pred}$,
+$\mu:\mathcal D_{\leq1}(\mathsf{Res}\ \Mem)$ and
+$k:\Mem\to\mathcal D_{\leq1}(\mathsf{Res}\ \Mem)$:
 \begin{align}
-  \mathrm{ewp}_{E}[\vx <- \expr](g)(m)&=g(m[\vx\mapped\expr(m)]),
-  &\mathrm{wp}_{G}[\vx <- \expr](Q)(m)&=Q(m[\vx\mapped\expr(m)]),
-  \label{eq:ljwp-assign}\\
+  &\mathbb E_{s\sim\mathrm{dlet}_{\mathrm{RM}}\ x\leftarrow\mu\ \mathrm{in}\ k(x)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]
+  \nonumber\\
+  &\qquad=\mathbb E_{r\sim\mu}
+  \Bigl[\Bigl(E;\ \mathsf{Ok}\mapsto\lambda x.\
+  \mathbb E_{s\sim k(x)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr)(r)\Bigr],
+  \label{eq:lj-dlet-exp}\\
+  &\forall s\in\supp\bigl(\mathrm{dlet}_{\mathrm{RM}}\ x\leftarrow\mu\ \mathrm{in}\ k(x)\bigr).\
+  (G;\mathsf{Ok}\mapsto Q)(s)
+  \nonumber\\
+  &\qquad\iff\forall r\in\supp(\mu).\
+  \Bigl(G;\ \mathsf{Ok}\mapsto\lambda x.\
+  \forall s\in\supp(k(x)).\ (G;\mathsf{Ok}\mapsto Q)(s)\Bigr)(r).
+  \label{eq:lj-dlet-guard}
+\end{align}
+\end{lemma}
+\begin{proof}
+Let $K$ be the function of $r$ in \eqref{eq:lj-dlet}, so that
+$\mathrm{dlet}_{\mathrm{RM}}\ x\leftarrow\mu\ \mathrm{in}\ k(x)=\operatorname{bind}(\mu,K)$.
+For the expectation,
+\[
+  \mathbb E_{s\sim\operatorname{bind}(\mu,K)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]
+  \overset{\eqref{eq:lj-bind}}{=}
+  \mathbb E_{r\sim\mu}\Bigl[\mathbb E_{s\sim K(r)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr],
+\]
+and it remains to show, for every $r$,
+\[
+  \mathbb E_{s\sim K(r)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]
+  =\Bigl(E;\ \mathsf{Ok}\mapsto\lambda x.\
+  \mathbb E_{s\sim k(x)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr)(r).
+\]
+If $r=\mathsf{Ok}(m')$:
+\[
+  \begin{aligned}
+  &\mathbb E_{s\sim K(\mathsf{Ok}(m'))}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-dlet}}{=}
+  \mathbb E_{s\sim k(m')}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  \Bigl(E;\ \mathsf{Ok}\mapsto\lambda x.\
+  \mathbb E_{s\sim k(x)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr)(\mathsf{Ok}(m')).
+  \end{aligned}
+\]
+If $r=\mathsf{Jump}(\ell,m')$:
+\[
+  \begin{aligned}
+  &\mathbb E_{s\sim K(\mathsf{Jump}(\ell,m'))}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-dlet}}{=}
+  \mathbb E_{s\sim\operatorname{return}(\mathsf{Jump}(\ell,m'))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-return}}{=}
+  (E;\mathsf{Ok}\mapsto g)(\mathsf{Jump}(\ell,m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  E(\ell)(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  \Bigl(E;\ \mathsf{Ok}\mapsto\lambda x.\
+  \mathbb E_{s\sim k(x)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr)(\mathsf{Jump}(\ell,m')).
+  \end{aligned}
+\]
+For the guard,
+\[
+  \forall s\in\supp(\operatorname{bind}(\mu,K)).\ (G;\mathsf{Ok}\mapsto Q)(s)
+  \overset{\eqref{eq:lj-bind}}{\iff}
+  \forall r\in\supp(\mu).\ \forall s\in\supp(K(r)).\ (G;\mathsf{Ok}\mapsto Q)(s),
+\]
+and it remains to show, for every $r$,
+\[
+  \forall s\in\supp(K(r)).\ (G;\mathsf{Ok}\mapsto Q)(s)
+  \iff\Bigl(G;\ \mathsf{Ok}\mapsto\lambda x.\
+  \forall s\in\supp(k(x)).\ (G;\mathsf{Ok}\mapsto Q)(s)\Bigr)(r).
+\]
+If $r=\mathsf{Ok}(m')$:
+\[
+  \begin{aligned}
+  &\forall s\in\supp(K(\mathsf{Ok}(m'))).\ (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-dlet}}{\iff}
+  \forall s\in\supp(k(m')).\ (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  \Bigl(G;\ \mathsf{Ok}\mapsto\lambda x.\
+  \forall s\in\supp(k(x)).\ (G;\mathsf{Ok}\mapsto Q)(s)\Bigr)(\mathsf{Ok}(m')).
+  \end{aligned}
+\]
+If $r=\mathsf{Jump}(\ell,m')$:
+\[
+  \begin{aligned}
+  &\forall s\in\supp(K(\mathsf{Jump}(\ell,m'))).\ (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-dlet}}{\iff}
+  \forall s\in\supp(\operatorname{return}(\mathsf{Jump}(\ell,m'))).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-return}}{\iff}
+  (G;\mathsf{Ok}\mapsto Q)(\mathsf{Jump}(\ell,m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  G(\ell)(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  \Bigl(G;\ \mathsf{Ok}\mapsto\lambda x.\
+  \forall s\in\supp(k(x)).\ (G;\mathsf{Ok}\mapsto Q)(s)\Bigr)(\mathsf{Jump}(\ell,m')).
+  \end{aligned}
+\]
+\end{proof}
+
+\subsection{Basic Equations}\label{app:lj-equations}
+
+\begin{lemma}[Basic equations]\label{lem:ljwp-equations}
+For all $E,G,g,Q$, memories $m$, commands $C,D,C_1,C_2$, labels $\ell$,
+Boolean expressions $\bexpr$ and distribution expressions $\sexpr$:
+\begin{align}
+  \mathrm{ewp}_{E}[\SKIP](g)&=g,
+  \nonumber\\
+  \mathrm{wp}_{G}[\SKIP](Q)&=Q,
+  \label{eq:ljwp-skip}\\[1ex]
+  \mathrm{ewp}_{E}[\vx <- \expression{e}](g)(m)
+  &=g(m[\vx\mapped\expression{e}(m)]),
+  \nonumber\\
+  \mathrm{wp}_{G}[\vx <- \expression{e}](Q)(m)
+  &=Q(m[\vx\mapped\expression{e}(m)]),
+  \label{eq:ljwp-assign}\\[1ex]
+  \mathrm{ewp}_{E}[\vx <* \sexpr](g)(m)
+  &=\mathbb E_{v\sim\sexpr(m)}\bigl[g(m[\vx\mapped v])\bigr],
+  \nonumber\\
+  \mathrm{wp}_{G}[\vx <* \sexpr](Q)(m)
+  &=\forall v\in\supp(\sexpr(m)).\ Q(m[\vx\mapped v]),
+  \label{eq:ljwp-sample}\\[1ex]
+  \mathrm{ewp}_{E}[C;D](g)
+  &=\mathrm{ewp}_{E}[C]\bigl(\mathrm{ewp}_{E}[D](g)\bigr),
+  \nonumber\\
+  \mathrm{wp}_{G}[C;D](Q)
+  &=\mathrm{wp}_{G}[C]\bigl(\mathrm{wp}_{G}[D](Q)\bigr),
+  \label{eq:ljwp-seq}\\[1ex]
+  \mathrm{ewp}_{E}[\ITE{\bexpr}{C_1}{C_2}](g)(m)
+  &=\begin{cases}
+      \mathrm{ewp}_{E}[C_1](g)(m),&\bexpr(m),\\
+      \mathrm{ewp}_{E}[C_2](g)(m),&\neg\bexpr(m),
+    \end{cases}
+  \nonumber\\
+  \mathrm{wp}_{G}[\ITE{\bexpr}{C_1}{C_2}](Q)(m)
+  &=\begin{cases}
+      \mathrm{wp}_{G}[C_1](Q)(m),&\bexpr(m),\\
+      \mathrm{wp}_{G}[C_2](Q)(m),&\neg\bexpr(m),
+    \end{cases}
+  \label{eq:ljwp-if}\\[1ex]
   \mathrm{ewp}_{E}[\mathsf{jump}\ \ell](g)&=E(\ell),
-  &\mathrm{wp}_{G}[\mathsf{jump}\ \ell](Q)&=G(\ell),
-  \label{eq:ljwp-jump}\\
-  \mathrm{ewp}_{E}[C;D](g)&=\mathrm{ewp}_{E}[C]\bigl(\mathrm{ewp}_{E}[D](g)\bigr),
-  &\mathrm{wp}_{G}[C;D](Q)&=\mathrm{wp}_{G}[C]\bigl(\mathrm{wp}_{G}[D](Q)\bigr),
-  \label{eq:ljwp-seq}\\
+  \nonumber\\
+  \mathrm{wp}_{G}[\mathsf{jump}\ \ell](Q)&=G(\ell),
+  \label{eq:ljwp-jump}\\[1ex]
   \mathrm{ewp}_{E}[\ell\{C\}](g)&=\mathrm{ewp}_{E[\ell\mapsto g]}[C](g),
-  &\mathrm{wp}_{G}[\ell\{C\}](Q)&=\mathrm{wp}_{G[\ell\mapsto Q]}[C](Q).
+  \nonumber\\
+  \mathrm{wp}_{G}[\ell\{C\}](Q)&=\mathrm{wp}_{G[\ell\mapsto Q]}[C](Q).
   \label{eq:ljwp-label}
 \end{align}
 \end{lemma}
 \begin{proof}
-Fix $m$. The proofs only use two facts about $\operatorname{return}$: for
-every $v\in\mathsf{Res}\ \Mem$, $h:\mathsf{Res}\ \Mem\to[0,\infty]$ and
-$\varphi:\mathsf{Res}\ \Mem\to\Bool$,
-\begin{equation}
-  \mathbb E_{r\sim\operatorname{return}(v)}[h(r)]=h(v),
-  \qquad
-  \bigl(\forall r\in\supp(\operatorname{return}(v)).\ \varphi(r)\bigr)
-  \iff\varphi(v).
-  \label{eq:lj-return}
-\end{equation}
-The first is \eqref{eq:cook-expect-return}, whose derivation does not
-depend on $\Mem$ and therefore holds verbatim over $\mathsf{Res}\ \Mem$; the
-second holds because $\supp(\operatorname{return}(v))=\{v\}$.
+Fix $m$.
 
-\smallskip\noindent\emph{Assignment.}
+\paragraph{Skip.}
 \[
   \begin{aligned}
-  \mathrm{ewp}_{E}[\vx <- \expr](g)(m)
+  \mathrm{ewp}_{E}[\SKIP](g)(m)
   &\overset{\eqref{eq:ljwp-wp}}{=}
-  \mathbb E_{r\sim\llbracket \vx <- \expr\rrbracket(m)}
+  \mathbb E_{r\sim\llbracket\SKIP\rrbracket(m)}
   \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
-  &\overset{\text{sem.}}{=}
-  \mathbb E_{r\sim\operatorname{return}(\mathsf{Ok}(m[\vx\mapped\expr(m)]))}
+  &\overset{\eqref{eq:lj-sem-skip}}{=}
+  \mathbb E_{r\sim\operatorname{return}(\mathsf{Ok}(m))}
   \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
   &\overset{\eqref{eq:lj-return}}{=}
-  (E;\mathsf{Ok}\mapsto g)\bigl(\mathsf{Ok}(m[\vx\mapped\expr(m)])\bigr)\\
+  (E;\mathsf{Ok}\mapsto g)\bigl(\mathsf{Ok}(m)\bigr)\\
   &\overset{\eqref{eq:ljwp-okmap}}{=}
-  g(m[\vx\mapped\expr(m)]),
+  g(m),
   \end{aligned}
 \]
 \[
   \begin{aligned}
-  \mathrm{wp}_{G}[\vx <- \expr](Q)(m)
+  \mathrm{wp}_{G}[\SKIP](Q)(m)
   &\overset{\eqref{eq:ljwp-wpG}}{\iff}
-  \forall r\in\supp(\llbracket \vx <- \expr\rrbracket(m)).\
+  \forall r\in\supp(\llbracket\SKIP\rrbracket(m)).\
   (G;\mathsf{Ok}\mapsto Q)(r)\\
-  &\overset{\text{sem.}}{\iff}
-  \forall r\in\supp\bigl(\operatorname{return}(\mathsf{Ok}(m[\vx\mapped\expr(m)]))\bigr).\
+  &\overset{\eqref{eq:lj-sem-skip}}{\iff}
+  \forall r\in\supp\bigl(\operatorname{return}(\mathsf{Ok}(m))\bigr).\
   (G;\mathsf{Ok}\mapsto Q)(r)\\
   &\overset{\eqref{eq:lj-return}}{\iff}
-  (G;\mathsf{Ok}\mapsto Q)\bigl(\mathsf{Ok}(m[\vx\mapped\expr(m)])\bigr)\\
+  (G;\mathsf{Ok}\mapsto Q)\bigl(\mathsf{Ok}(m)\bigr)\\
   &\overset{\eqref{eq:ljwp-okmap}}{\iff}
-  Q(m[\vx\mapped\expr(m)]).
+  Q(m).
   \end{aligned}
 \]
 
-\smallskip\noindent\emph{Jump.}
+\paragraph{Assignment.}
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[\vx <- \expression{e}](g)(m)
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{r\sim\llbracket \vx <- \expression{e}\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-sem-assign}}{=}
+  \mathbb E_{r\sim\operatorname{return}(\mathsf{Ok}(m[\vx\mapped\expression{e}(m)]))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-return}}{=}
+  (E;\mathsf{Ok}\mapsto g)\bigl(\mathsf{Ok}(m[\vx\mapped\expression{e}(m)])\bigr)\\
+  &\overset{\eqref{eq:ljwp-okmap}}{=}
+  g(m[\vx\mapped\expression{e}(m)]),
+  \end{aligned}
+\]
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\vx <- \expression{e}](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall r\in\supp(\llbracket \vx <- \expression{e}\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-sem-assign}}{\iff}
+  \forall r\in\supp\bigl(\operatorname{return}(\mathsf{Ok}(m[\vx\mapped\expression{e}(m)]))\bigr).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-return}}{\iff}
+  (G;\mathsf{Ok}\mapsto Q)\bigl(\mathsf{Ok}(m[\vx\mapped\expression{e}(m)])\bigr)\\
+  &\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  Q(m[\vx\mapped\expression{e}(m)]).
+  \end{aligned}
+\]
+
+\paragraph{Sampling.}
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[\vx <* \sexpr](g)(m)
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{r\sim\llbracket\vx <* \sexpr\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-sem-sample}}{=}
+  \mathbb E_{r\sim\operatorname{bind}(\sexpr(m),\
+    \lambda v.\,\operatorname{return}(\mathsf{Ok}(m[\vx\mapped v])))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-bind}}{=}
+  \mathbb E_{v\sim\sexpr(m)}\Bigl[
+  \mathbb E_{r\sim\operatorname{return}(\mathsf{Ok}(m[\vx\mapped v]))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\Bigr]\\
+  &\overset{\eqref{eq:lj-return}}{=}
+  \mathbb E_{v\sim\sexpr(m)}\bigl[
+  (E;\mathsf{Ok}\mapsto g)(\mathsf{Ok}(m[\vx\mapped v]))\bigr]\\
+  &\overset{\eqref{eq:ljwp-okmap}}{=}
+  \mathbb E_{v\sim\sexpr(m)}\bigl[g(m[\vx\mapped v])\bigr],
+  \end{aligned}
+\]
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\vx <* \sexpr](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall r\in\supp(\llbracket\vx <* \sexpr\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-sem-sample}}{\iff}
+  \forall r\in\supp\bigl(\operatorname{bind}(\sexpr(m),\
+    \lambda v.\,\operatorname{return}(\mathsf{Ok}(m[\vx\mapped v])))\bigr).\\
+  &\qquad\qquad(G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-bind}}{\iff}
+  \forall v\in\supp(\sexpr(m)).\
+  \forall r\in\supp\bigl(\operatorname{return}(\mathsf{Ok}(m[\vx\mapped v]))\bigr).\\
+  &\qquad\qquad(G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-return}}{\iff}
+  \forall v\in\supp(\sexpr(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(\mathsf{Ok}(m[\vx\mapped v]))\\
+  &\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  \forall v\in\supp(\sexpr(m)).\ Q(m[\vx\mapped v]).
+  \end{aligned}
+\]
+
+\paragraph{Sequence.}
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[C;D](g)(m)
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{s\sim\llbracket C;D\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\overset{\eqref{eq:lj-sem-seq}}{=}
+  \mathbb E_{s\sim\mathrm{dlet}_{\mathrm{RM}}\ m'\leftarrow\llbracket C\rrbracket(m)\
+  \mathrm{in}\ \llbracket D\rrbracket(m')}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\overset{\eqref{eq:lj-dlet-exp}}{=}
+  \mathbb E_{r\sim\llbracket C\rrbracket(m)}
+  \Bigl[\Bigl(E;\ \mathsf{Ok}\mapsto\lambda m'.\
+  \mathbb E_{s\sim\llbracket D\rrbracket(m')}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr)(r)\Bigr]\\
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{r\sim\llbracket C\rrbracket(m)}
+  \Bigl[\bigl(E;\ \mathsf{Ok}\mapsto\mathrm{ewp}_{E}[D](g)\bigr)(r)\Bigr]\\
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathrm{ewp}_{E}[C]\bigl(\mathrm{ewp}_{E}[D](g)\bigr)(m),
+  \end{aligned}
+\]
+where the fourth step uses \eqref{eq:ljwp-wp} for $D$ at every $m'$, so
+that the $\lambda$-term is the function $\mathrm{ewp}_{E}[D](g)$, and the
+last step uses \eqref{eq:ljwp-wp} for $C$ with post-expectation
+$\mathrm{ewp}_{E}[D](g)$. For the guard,
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[C;D](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall s\in\supp(\llbracket C;D\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\overset{\eqref{eq:lj-sem-seq}}{\iff}
+  \forall s\in\supp\bigl(\mathrm{dlet}_{\mathrm{RM}}\ m'\leftarrow\llbracket C\rrbracket(m)\
+  \mathrm{in}\ \llbracket D\rrbracket(m')\bigr).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\overset{\eqref{eq:lj-dlet-guard}}{\iff}
+  \forall r\in\supp(\llbracket C\rrbracket(m)).\
+  \Bigl(G;\ \mathsf{Ok}\mapsto\lambda m'.\
+  \forall s\in\supp(\llbracket D\rrbracket(m')).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\Bigr)(r)\\
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall r\in\supp(\llbracket C\rrbracket(m)).\
+  \bigl(G;\ \mathsf{Ok}\mapsto\mathrm{wp}_{G}[D](Q)\bigr)(r)\\
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \mathrm{wp}_{G}[C]\bigl(\mathrm{wp}_{G}[D](Q)\bigr)(m).
+  \end{aligned}
+\]
+
+\paragraph{Conditional.}
+Suppose $\bexpr(m)$. Then
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[\ITE{\bexpr}{C_1}{C_2}](g)(m)
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{r\sim\llbracket\ITE{\bexpr}{C_1}{C_2}\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-sem-if}}{=}
+  \mathbb E_{r\sim\llbracket C_1\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathrm{ewp}_{E}[C_1](g)(m),
+  \end{aligned}
+\]
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\ITE{\bexpr}{C_1}{C_2}](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall r\in\supp(\llbracket\ITE{\bexpr}{C_1}{C_2}\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-sem-if}}{\iff}
+  \forall r\in\supp(\llbracket C_1\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \mathrm{wp}_{G}[C_1](Q)(m).
+  \end{aligned}
+\]
+The case $\neg\bexpr(m)$ is the same with $C_2$ in place of $C_1$.
+
+\paragraph{Jump.}
 \[
   \begin{aligned}
   \mathrm{ewp}_{E}[\mathsf{jump}\ \ell](g)(m)
   &\overset{\eqref{eq:ljwp-wp}}{=}
   \mathbb E_{r\sim\llbracket \mathsf{jump}\ \ell\rrbracket(m)}
   \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
-  &\overset{\text{sem.}}{=}
+  &\overset{\eqref{eq:lj-sem-jump}}{=}
   \mathbb E_{r\sim\operatorname{return}(\mathsf{Jump}(\ell,m))}
   \bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
   &\overset{\eqref{eq:lj-return}}{=}
@@ -790,7 +1177,7 @@ second holds because $\supp(\operatorname{return}(v))=\{v\}$.
   &\overset{\eqref{eq:ljwp-wpG}}{\iff}
   \forall r\in\supp(\llbracket \mathsf{jump}\ \ell\rrbracket(m)).\
   (G;\mathsf{Ok}\mapsto Q)(r)\\
-  &\overset{\text{sem.}}{\iff}
+  &\overset{\eqref{eq:lj-sem-jump}}{\iff}
   \forall r\in\supp\bigl(\operatorname{return}(\mathsf{Jump}(\ell,m))\bigr).\
   (G;\mathsf{Ok}\mapsto Q)(r)\\
   &\overset{\eqref{eq:lj-return}}{\iff}
@@ -802,56 +1189,273 @@ second holds because $\supp(\operatorname{return}(v))=\{v\}$.
 Neither $g$ nor $Q$ appears in the result, since $\mathsf{jump}\ \ell$
 never terminates normally.
 
-\smallskip\noindent\emph{Sequence and label.}
-\todo{TODO: Proofs to be added.}
+\paragraph{Label.}
+Let $K$ be the function of $r$ in \eqref{eq:lj-sem-label}, so that
+$\llbracket\ell\{C\}\rrbracket(m)=\operatorname{bind}(\llbracket C\rrbracket(m),K)$.
+For the expectation,
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[\ell\{C\}](g)(m)
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathbb E_{s\sim\llbracket \ell\{C\}\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\overset{\eqref{eq:lj-sem-label}}{=}
+  \mathbb E_{s\sim\operatorname{bind}(\llbracket C\rrbracket(m),K)}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\overset{\eqref{eq:lj-bind}}{=}
+  \mathbb E_{r\sim\llbracket C\rrbracket(m)}
+  \Bigl[\mathbb E_{s\sim K(r)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr]\\
+  &\overset{(*)}{=}
+  \mathbb E_{r\sim\llbracket C\rrbracket(m)}
+  \bigl[(E[\ell\mapsto g];\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathrm{ewp}_{E[\ell\mapsto g]}[C](g)(m),
+  \end{aligned}
+\]
+where $(*)$ is the following equation, shown for every $r$:
+\[
+  \mathbb E_{s\sim K(r)}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]
+  =(E[\ell\mapsto g];\mathsf{Ok}\mapsto g)(r).
+\]
+If $r=\mathsf{Ok}(m')$:
+\[
+  \begin{aligned}
+  &\mathbb E_{s\sim K(\mathsf{Ok}(m'))}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-sem-label}}{=}
+  \mathbb E_{s\sim\operatorname{return}(\mathsf{Ok}(m'))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-return}}{=}
+  (E;\mathsf{Ok}\mapsto g)(\mathsf{Ok}(m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  g(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  (E[\ell\mapsto g];\mathsf{Ok}\mapsto g)(\mathsf{Ok}(m')).
+  \end{aligned}
+\]
+If $r=\mathsf{Jump}(\ell,m')$:
+\[
+  \begin{aligned}
+  &\mathbb E_{s\sim K(\mathsf{Jump}(\ell,m'))}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-sem-label}}{=}
+  \mathbb E_{s\sim\operatorname{return}(\mathsf{Ok}(m'))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-return}}{=}
+  (E;\mathsf{Ok}\mapsto g)(\mathsf{Ok}(m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  g(m')\\
+  &\qquad\overset{\eqref{eq:lj-envupd}}{=}
+  E[\ell\mapsto g](\ell)(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  (E[\ell\mapsto g];\mathsf{Ok}\mapsto g)(\mathsf{Jump}(\ell,m')).
+  \end{aligned}
+\]
+If $r=\mathsf{Jump}(\ell',m')$ with $\ell'\neq\ell$:
+\[
+  \begin{aligned}
+  &\mathbb E_{s\sim K(\mathsf{Jump}(\ell',m'))}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-sem-label}}{=}
+  \mathbb E_{s\sim\operatorname{return}(\mathsf{Jump}(\ell',m'))}
+  \bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-return}}{=}
+  (E;\mathsf{Ok}\mapsto g)(\mathsf{Jump}(\ell',m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  E(\ell')(m')\\
+  &\qquad\overset{\eqref{eq:lj-envupd}}{=}
+  E[\ell\mapsto g](\ell')(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{=}
+  (E[\ell\mapsto g];\mathsf{Ok}\mapsto g)(\mathsf{Jump}(\ell',m')).
+  \end{aligned}
+\]
+For the guard,
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\ell\{C\}](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \forall s\in\supp(\llbracket \ell\{C\}\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\overset{\eqref{eq:lj-sem-label}}{\iff}
+  \forall s\in\supp\bigl(\operatorname{bind}(\llbracket C\rrbracket(m),K)\bigr).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\overset{\eqref{eq:lj-bind}}{\iff}
+  \forall r\in\supp(\llbracket C\rrbracket(m)).\
+  \forall s\in\supp(K(r)).\ (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\overset{(**)}{\iff}
+  \forall r\in\supp(\llbracket C\rrbracket(m)).\
+  (G[\ell\mapsto Q];\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \mathrm{wp}_{G[\ell\mapsto Q]}[C](Q)(m),
+  \end{aligned}
+\]
+where $(**)$ is the following equivalence, shown for every $r$:
+\[
+  \forall s\in\supp(K(r)).\ (G;\mathsf{Ok}\mapsto Q)(s)
+  \iff(G[\ell\mapsto Q];\mathsf{Ok}\mapsto Q)(r).
+\]
+If $r=\mathsf{Ok}(m')$:
+\[
+  \begin{aligned}
+  &\forall s\in\supp(K(\mathsf{Ok}(m'))).\ (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-sem-label}}{\iff}
+  \forall s\in\supp(\operatorname{return}(\mathsf{Ok}(m'))).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-return}}{\iff}
+  (G;\mathsf{Ok}\mapsto Q)(\mathsf{Ok}(m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  Q(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  (G[\ell\mapsto Q];\mathsf{Ok}\mapsto Q)(\mathsf{Ok}(m')).
+  \end{aligned}
+\]
+If $r=\mathsf{Jump}(\ell,m')$:
+\[
+  \begin{aligned}
+  &\forall s\in\supp(K(\mathsf{Jump}(\ell,m'))).\ (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-sem-label}}{\iff}
+  \forall s\in\supp(\operatorname{return}(\mathsf{Ok}(m'))).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-return}}{\iff}
+  (G;\mathsf{Ok}\mapsto Q)(\mathsf{Ok}(m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  Q(m')\\
+  &\qquad\overset{\eqref{eq:lj-envupd}}{\iff}
+  G[\ell\mapsto Q](\ell)(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  (G[\ell\mapsto Q];\mathsf{Ok}\mapsto Q)(\mathsf{Jump}(\ell,m')).
+  \end{aligned}
+\]
+If $r=\mathsf{Jump}(\ell',m')$ with $\ell'\neq\ell$:
+\[
+  \begin{aligned}
+  &\forall s\in\supp(K(\mathsf{Jump}(\ell',m'))).\ (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-sem-label}}{\iff}
+  \forall s\in\supp(\operatorname{return}(\mathsf{Jump}(\ell',m'))).\
+  (G;\mathsf{Ok}\mapsto Q)(s)\\
+  &\qquad\overset{\eqref{eq:lj-return}}{\iff}
+  (G;\mathsf{Ok}\mapsto Q)(\mathsf{Jump}(\ell',m'))\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  G(\ell')(m')\\
+  &\qquad\overset{\eqref{eq:lj-envupd}}{\iff}
+  G[\ell\mapsto Q](\ell')(m')\\
+  &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
+  (G[\ell\mapsto Q];\mathsf{Ok}\mapsto Q)(\mathsf{Jump}(\ell',m')).
+  \end{aligned}
+\]
 \end{proof}
 
-\paragraph{Rules and their soundness.}
+\subsection{Rules and Their Soundness}\label{app:lj-rules}
 
-\paragraph{Assignment.}
+For each rule we show that its conclusion is valid in the sense of
+\eqref{eq:ljwp-validity} whenever its premises are. Each proof unfolds
+\eqref{eq:ljwp-validity} into a guard condition and a numerical condition
+and discharges both with \Cref{lem:ljwp-equations}. We use that
+$\bowtie\in\{\leq,=,\geq\}$ is reflexive.
+
+\subsubsection{Skip}\label{app:lj-rule-skip}
+\[
+  \frac{}{
+    G\mid E\vdash\{Q\mid g\}_{\bowtie}\ \SKIP\ \{Q\mid g\}
+  }
+  \;\textsc{Skip}
+\]
+
+\begin{proof}
+By \eqref{eq:ljwp-validity}, we must show that for every memory $m$,
+\[
+  Q(m)\ \Longrightarrow\
+  \mathrm{wp}_{G}[\SKIP](Q)(m)
+  \ \land\
+  g(m)\mathrel{\bowtie}\mathrm{ewp}_{E}[\SKIP](g)(m).
+\]
+So let $m$ be a memory and assume $Q(m)$.
+For the guard condition, by \eqref{eq:ljwp-skip},
+\[
+  \mathrm{wp}_{G}[\SKIP](Q)(m)=Q(m),
+\]
+which is exactly the assumption.
+For the numerical condition, by \eqref{eq:ljwp-skip},
+\[
+  \mathrm{ewp}_{E}[\SKIP](g)(m)=g(m),
+\]
+so we must show $g(m)\mathrel{\bowtie}g(m)$, which holds by reflexivity
+of $\bowtie$.
+\end{proof}
+
+\subsubsection{Assignment}\label{app:lj-rule-assign}
 For a predicate $Q$ and an expectation $g$ write
-$Q[\vx\mapped\expr](m)\defsym Q(m[\vx\mapped\expr(m)])$ and
-$g[\vx\mapped\expr](m)\defsym g(m[\vx\mapped\expr(m)])$.
+$Q[\vx\mapped\expression{e}](m)\defsym Q(m[\vx\mapped\expression{e}(m)])$ and
+$g[\vx\mapped\expression{e}](m)\defsym g(m[\vx\mapped\expression{e}(m)])$.
 \[
   \frac{}{
     G\mid E\vdash
-    \{Q[\vx\mapped\expr]\mid g[\vx\mapped\expr]\}_{\bowtie}\
-    \vx <- \expr\
+    \{Q[\vx\mapped\expression{e}]\mid g[\vx\mapped\expression{e}]\}_{\bowtie}\
+    \vx <- \expression{e}\
     \{Q\mid g\}
   }
   \;\textsc{Assign}
 \]
 
-\begin{lemma}[\textsc{Assign}]\label{lem:ljwp-assign}
-$\models G\mid E\vdash
-\{Q[\vx\mapped\expr]\mid g[\vx\mapped\expr]\}_{\bowtie}\
-\vx <- \expr\ \{Q\mid g\}$.
-\end{lemma}
-\noindent\todo{TODO: Proof to be rewritten in the new notation.}
-
-\paragraph{Jump.}
-A jump never ends normally, so the postcondition $\{Q\mid g\}$ plays no
-role.
+\begin{proof}
+Fix $m$ with $Q[\vx\mapped\expression{e}](m)$, that is,
+$Q(m[\vx\mapped\expression{e}(m)])$.
+For the guard condition,
 \[
-  \frac{
-    \forall m.\ P(m)\Longrightarrow G(\ell)(m)
-    \qquad
-    \forall m.\ P(m)\Longrightarrow
-      f(m)\mathrel{\bowtie}E(\ell)(m)
-  }{
+  \mathrm{wp}_{G}[\vx <- \expression{e}](Q)(m)
+  \overset{\eqref{eq:ljwp-assign}}{=}
+  Q(m[\vx\mapped\expression{e}(m)]),
+\]
+which holds by assumption.
+For the numerical condition,
+\[
+  \mathrm{ewp}_{E}[\vx <- \expression{e}](g)(m)
+  \overset{\eqref{eq:ljwp-assign}}{=}
+  g(m[\vx\mapped\expression{e}(m)])
+  =
+  g[\vx\mapped\expression{e}](m),
+\]
+so we must show
+$g[\vx\mapped\expression{e}](m)\mathrel{\bowtie}g[\vx\mapped\expression{e}](m)$,
+which holds by reflexivity of $\bowtie$.
+\end{proof}
+
+\subsubsection{Sampling}\label{app:lj-rule-sample}
+For a predicate $Q$ and an expectation $g$ write
+$\bigl(\forall v\in\supp(\sexpr).\ Q[\vx\mapped v]\bigr)(m)\defsym
+\forall v\in\supp(\sexpr(m)).\ Q(m[\vx\mapped v])$ and
+$\mathbb E_{v\sim\sexpr}\bigl[g[\vx\mapped v]\bigr](m)\defsym
+\mathbb E_{v\sim\sexpr(m)}\bigl[g(m[\vx\mapped v])\bigr]$.
+\[
+  \frac{}{
     G\mid E\vdash
-    \{P\mid f\}_{\bowtie}\ \mathsf{jump}\ \ell\ \{Q\mid g\}
+    \bigl\{\forall v\in\supp(\sexpr).\ Q[\vx\mapped v]\bigm|
+    \mathbb E_{v\sim\sexpr}\bigl[g[\vx\mapped v]\bigr]\bigr\}_{\bowtie}\
+    \vx <* \sexpr\
+    \{Q\mid g\}
   }
-  \;\textsc{Jump}
+  \;\textsc{Sample}
 \]
 
-\begin{lemma}[\textsc{Jump}]\label{lem:ljwp-jump}
-If both premises of \textsc{Jump} hold, then
-$\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ \mathsf{jump}\ \ell\ \{Q\mid g\}$.
-\end{lemma}
-\noindent\todo{TODO: Proof to be rewritten in the new notation.}
+\begin{proof}
+Fix $m$ with $\forall v\in\supp(\sexpr(m)).\ Q(m[\vx\mapped v])$.
+For the guard condition,
+\[
+  \mathrm{wp}_{G}[\vx <* \sexpr](Q)(m)
+  \overset{\eqref{eq:ljwp-sample}}{=}
+  \forall v\in\supp(\sexpr(m)).\ Q(m[\vx\mapped v]),
+\]
+which holds by assumption.
+For the numerical condition,
+\[
+  \mathrm{ewp}_{E}[\vx <* \sexpr](g)(m)
+  \overset{\eqref{eq:ljwp-sample}}{=}
+  \mathbb E_{v\sim\sexpr(m)}\bigl[g(m[\vx\mapped v])\bigr]
+  =
+  \mathbb E_{v\sim\sexpr}\bigl[g[\vx\mapped v]\bigr](m),
+\]
+so the pre-expectation equals $\mathrm{ewp}_{E}[\vx <* \sexpr](g)(m)$
+and the condition holds by reflexivity of $\bowtie$.
+\end{proof}
 
-\paragraph{Sequence.}
+\subsubsection{Sequence}\label{app:lj-rule-seq}
 The intermediate assertion $\{R\mid h\}$ connects the two premises: $R$
 holds after every normal exit of $C$, and $h$ is the value carried from
 $C$ to $D$ at that point. Jumps out of $C$ skip $D$ and are handled by the
@@ -867,14 +1471,129 @@ shared environment $G\mid E$.
   \;\textsc{Seq}
 \]
 
-\begin{lemma}[\textsc{Seq}]\label{lem:ljwp-seq}
-If $\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{R\mid h\}$ and
-$\models G\mid E\vdash\{R\mid h\}_{\bowtie}\ D\ \{Q\mid g\}$, then
-$\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ C;D\ \{Q\mid g\}$.
-\end{lemma}
-\noindent\todo{TODO: Proof to be rewritten in the new notation.}
+\begin{proof}
+Fix $m$ with $P(m)$. The first premise gives
+\[
+  \text{(i)}\ \ \mathrm{wp}_{G}[C](R)(m),
+  \qquad
+  \text{(ii)}\ \ f(m)\mathrel{\bowtie}\mathrm{ewp}_{E}[C](h)(m),
+\]
+and the second premise gives, for every $m'$ with $R(m')$,
+\[
+  \text{(iii)}\ \ \mathrm{wp}_{G}[D](Q)(m'),
+  \qquad
+  \text{(iv)}\ \ h(m')\mathrel{\bowtie}\mathrm{ewp}_{E}[D](g)(m').
+\]
+By \eqref{eq:ljwp-wpG}, (i) says that $(G;\mathsf{Ok}\mapsto R)(r)$ holds
+for every $r\in\supp(\llbracket C\rrbracket(m))$. Fix such an $r$.
+\begin{itemize}
+  \item If $r=\mathsf{Ok}(m')$, then $R(m')$ by \eqref{eq:ljwp-okmap}, so
+    (iii) and (iv) apply at $m'$ and give, by \eqref{eq:ljwp-okmap},
+    \[
+      \bigl(G;\mathsf{Ok}\mapsto\mathrm{wp}_{G}[D](Q)\bigr)(r)
+      \quad\text{and}\quad
+      (E;\mathsf{Ok}\mapsto h)(r)\mathrel{\bowtie}
+      \bigl(E;\mathsf{Ok}\mapsto\mathrm{ewp}_{E}[D](g)\bigr)(r).
+    \]
+  \item If $r=\mathsf{Jump}(\ell,m')$, then by \eqref{eq:ljwp-okmap} the
+    guard $\bigl(G;\mathsf{Ok}\mapsto\mathrm{wp}_{G}[D](Q)\bigr)(r)$ is
+    $G(\ell)(m')$, which holds by (i), and both
+    $(E;\mathsf{Ok}\mapsto h)(r)$ and
+    $\bigl(E;\mathsf{Ok}\mapsto\mathrm{ewp}_{E}[D](g)\bigr)(r)$ are
+    $E(\ell)(m')$, so they are related by $\bowtie$ by reflexivity.
+\end{itemize}
+For the guard condition, the first part of both cases gives, for every
+$r\in\supp(\llbracket C\rrbracket(m))$,
+$\bigl(G;\mathsf{Ok}\mapsto\mathrm{wp}_{G}[D](Q)\bigr)(r)$, hence
+\[
+  \mathrm{wp}_{G}[C]\bigl(\mathrm{wp}_{G}[D](Q)\bigr)(m)
+  \overset{\eqref{eq:ljwp-seq}}{=}
+  \mathrm{wp}_{G}[C;D](Q)(m)
+\]
+by \eqref{eq:ljwp-wpG}.
+For the numerical condition, the second part of both cases relates the
+two brackets by $\bowtie$ at every $r$ in the support. An expectation only
+depends on the values on the support and is monotone, so averaging over
+$r\sim\llbracket C\rrbracket(m)$ keeps $\bowtie$, and by
+\eqref{eq:ljwp-wp}
+\[
+  f(m)
+  \overset{\text{(ii)}}{\mathrel{\bowtie}}
+  \mathrm{ewp}_{E}[C](h)(m)
+  \mathrel{\bowtie}
+  \mathrm{ewp}_{E}[C]\bigl(\mathrm{ewp}_{E}[D](g)\bigr)(m)
+  \overset{\eqref{eq:ljwp-seq}}{=}
+  \mathrm{ewp}_{E}[C;D](g)(m).
+\]
+Since $\bowtie$ is transitive,
+$f(m)\mathrel{\bowtie}\mathrm{ewp}_{E}[C;D](g)(m)$.
+\end{proof}
 
-\paragraph{Label.}
+\subsubsection{Conditional}\label{app:lj-rule-if}
+\[
+  \frac{
+    G\mid E\vdash\{\bexpr\land P\mid f\}_{\bowtie}\ C_1\ \{Q\mid g\}
+    \qquad
+    G\mid E\vdash\{\neg\bexpr\land P\mid f\}_{\bowtie}\ C_2\ \{Q\mid g\}
+  }{
+    G\mid E\vdash\{P\mid f\}_{\bowtie}\ \ITE{\bexpr}{C_1}{C_2}\ \{Q\mid g\}
+  }
+  \;\textsc{If}
+\]
+
+\begin{proof}
+Fix $m$ with $P(m)$, and suppose $\bexpr(m)$. Then
+$(\bexpr\land P)(m)$, so the first premise gives
+$\mathrm{wp}_{G}[C_1](Q)(m)$ and
+$f(m)\mathrel{\bowtie}\mathrm{ewp}_{E}[C_1](g)(m)$. By
+\eqref{eq:ljwp-if}, since $\bexpr(m)$,
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\ITE{\bexpr}{C_1}{C_2}](Q)(m)
+  &=\mathrm{wp}_{G}[C_1](Q)(m),\\
+  \mathrm{ewp}_{E}[\ITE{\bexpr}{C_1}{C_2}](g)(m)
+  &=\mathrm{ewp}_{E}[C_1](g)(m),
+  \end{aligned}
+\]
+so both conditions hold. The case $\neg\bexpr(m)$ is the same, using the
+second premise and $C_2$.
+\end{proof}
+
+\subsubsection{Jump}\label{app:lj-rule-jump}
+A jump never ends normally, so the postcondition $\{Q\mid g\}$ plays no
+role.
+\[
+  \frac{
+    \forall m.\ P(m)\Longrightarrow G(\ell)(m)
+    \qquad
+    \forall m.\ P(m)\Longrightarrow
+      f(m)\mathrel{\bowtie}E(\ell)(m)
+  }{
+    G\mid E\vdash
+    \{P\mid f\}_{\bowtie}\ \mathsf{jump}\ \ell\ \{Q\mid g\}
+  }
+  \;\textsc{Jump}
+\]
+
+\begin{proof}
+Fix $m$ with $P(m)$.
+For the guard condition,
+\[
+  \mathrm{wp}_{G}[\mathsf{jump}\ \ell](Q)(m)
+  \overset{\eqref{eq:ljwp-jump}}{=}
+  G(\ell)(m),
+\]
+which holds by the first premise.
+For the numerical condition,
+\[
+  \mathrm{ewp}_{E}[\mathsf{jump}\ \ell](g)(m)
+  \overset{\eqref{eq:ljwp-jump}}{=}
+  E(\ell)(m),
+\]
+and $f(m)\mathrel{\bowtie}E(\ell)(m)$ holds by the second premise.
+\end{proof}
+
+\subsubsection{Label}\label{app:lj-rule-label}
 Inside $\ell\{C\}$, a jump to $\ell$ ends the block normally. So in the
 premise the label $\ell$ is given the postcondition itself: guard $Q$ and
 weight $g$. Jumps to other labels keep their guard and weight from
@@ -890,29 +1609,26 @@ $G\mid E$.
   \;\textsc{Label}
 \]
 
-\begin{lemma}[\textsc{Label}]\label{lem:ljwp-label}
-If $\models G[\ell\mapsto Q]\mid E[\ell\mapsto g]\vdash
-\{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}$, then
-$\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ \ell\{C\}\ \{Q\mid g\}$.
-\end{lemma}
-\noindent\todo{TODO: Proof to be rewritten in the new notation.}
-
-\begin{theorem}[Soundness for labeled jumps]\label{thm:lj-soundness}
-If $G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}$ is derivable with
-the rules \textsc{Assign}, \textsc{Jump}, \textsc{Seq} and \textsc{Label},
-then $\models G\mid E\vdash\{P\mid f\}_{\bowtie}\ C\ \{Q\mid g\}$.
-\end{theorem}
 \begin{proof}
-By induction on the derivation. The last rule used is one of the four
-rules above, and its lemma
-(\Cref{lem:ljwp-assign,lem:ljwp-jump,lem:ljwp-seq,lem:ljwp-label}) shows
-that the conclusion is valid, provided its premises are. For \textsc{Seq}
-and \textsc{Label}, the premises are judgments, valid by the induction
-hypothesis (for \textsc{Label}, in the environment
-$G[\ell\mapsto Q]\mid E[\ell\mapsto g]$). For \textsc{Jump}, the premises
-are conditions on memories that hold by assumption, and \textsc{Assign}
-has no premises.
+Fix $m$ with $P(m)$. The premise gives
+\[
+  \mathrm{wp}_{G[\ell\mapsto Q]}[C](Q)(m)
+  \qquad\text{and}\qquad
+  f(m)\mathrel{\bowtie}\mathrm{ewp}_{E[\ell\mapsto g]}[C](g)(m).
+\]
+By \eqref{eq:ljwp-label},
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G[\ell\mapsto Q]}[C](Q)(m)
+  &=\mathrm{wp}_{G}[\ell\{C\}](Q)(m),\\
+  \mathrm{ewp}_{E[\ell\mapsto g]}[C](g)(m)
+  &=\mathrm{ewp}_{E}[\ell\{C\}](g)(m),
+  \end{aligned}
+\]
+so both conditions hold.
 \end{proof}
+
+
 
 \noindent\makebox[\linewidth]{\rule{\textwidth}{0.4pt}}
 
