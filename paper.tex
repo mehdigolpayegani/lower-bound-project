@@ -605,7 +605,7 @@ and labeled blocks:
   \mid \ell\{C\}.
   \label{eq:lj-syntax}
 \end{equation}
-\todo{TODO: semantics, equations, rule and soundness for $\mathsf{while}$.}
+\todo{TODO: rule and soundness for $\mathsf{while}$.}
 
 \paragraph{Results.}
 \[
@@ -682,6 +682,38 @@ runs $k$ on a normal result and passes a jump through unchanged:
   \end{cases}\right)
   \label{eq:lj-sem-label}
 \end{equation}
+
+For the loop, let $K:\Mem\to\mathcal D_{\leq1}(\mathsf{Res}\ \Mem)$ and
+define
+\begin{equation}
+  \mathcal F_{\bexpr,C}(K)(m)
+  \defsym
+  \begin{cases}
+    \mathrm{dlet}_{\mathrm{RM}}\ m'\leftarrow\llbracket C\rrbracket(m)\
+    \mathrm{in}\ K(m'),&\bexpr(m),\\
+    \operatorname{return}(\mathsf{Ok}(m)),&\neg\bexpr(m).
+  \end{cases}
+  \label{eq:lj-loop-functional}
+\end{equation}
+Starting from the zero function and applying $\mathcal F_{\bexpr,C}$
+repeatedly gives the approximations
+\[
+  W_0\defsym\lambda m.\,0,
+  \qquad
+  W_{n+1}\defsym\mathcal F_{\bexpr,C}(W_n),
+\]
+where $0$ is the zero subdistribution. Intuitively, $W_n(m)$ collects the
+runs from $m$ that end, normally or by a jump, before the $(n+1)$-th
+evaluation of $\bexpr$. The $W_n(m)$ increase pointwise, and the loop is
+their limit:
+\begin{equation}
+  \llbracket\WHILE \bexpr\DO C\rrbracket(m)
+  \defsym\sup_{n}W_n(m).
+  \label{eq:lj-sem-while}
+\end{equation}
+By Kleene's fixed-point theorem this is the least fixed point of
+$\mathcal F_{\bexpr,C}$, that is, the least solution of the unfolding
+equation of the loop.
 
 \subsection{Weakest Pre-Expectation and Weakest Guard}\label{app:lj-wp}
 
@@ -1338,6 +1370,125 @@ If $r=\mathsf{Jump}(\ell',m')$ with $\ell'\neq\ell$:
   G[\ell\mapsto Q](\ell')(m')\\
   &\qquad\overset{\eqref{eq:ljwp-okmap}}{\iff}
   (G[\ell\mapsto Q];\mathsf{Ok}\mapsto Q)(\mathsf{Jump}(\ell',m')).
+  \end{aligned}
+\]
+\end{proof}
+
+\paragraph{While.}
+\begin{lemma}[Loop]\label{lem:ljwp-while}
+For $\bexpr$, $C$, $E$, $G$, $g$ and $Q$, define
+$\Phi:\mathsf{Exp}\to\mathsf{Exp}$ and $\Psi:\mathsf{Pred}\to\mathsf{Pred}$ by
+\[
+  \Phi(X)(m)\defsym
+  \begin{cases}
+    \mathrm{ewp}_{E}[C](X)(m),&\bexpr(m),\\
+    g(m),&\neg\bexpr(m),
+  \end{cases}
+  \qquad
+  \Psi(Y)(m)\defsym
+  \begin{cases}
+    \mathrm{wp}_{G}[C](Y)(m),&\bexpr(m),\\
+    Q(m),&\neg\bexpr(m),
+  \end{cases}
+\]
+and let $X_n\defsym\Phi^n(\lambda m.\,0)$ and
+$Y_n\defsym\Psi^n(\lambda m.\,\mathsf{true})$. Then
+\begin{align}
+  \mathrm{ewp}_{E}[\WHILE \bexpr\DO C](g)
+  &=\sup_{n}X_n,
+  \nonumber\\
+  \mathrm{wp}_{G}[\WHILE \bexpr\DO C](Q)
+  &=\bigwedge_{n}Y_n.
+  \label{eq:ljwp-while}
+\end{align}
+\end{lemma}
+\begin{proof}
+Let $W_n$ be as in \eqref{eq:lj-sem-while}.
+
+\paragraph{Expectation.}
+We first show, by induction on $n$, that for every $m$
+\begin{equation}
+  \mathbb E_{r\sim W_n(m)}\bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]=X_n(m).
+  \label{eq:lj-while-exp-n}
+\end{equation}
+For $n=0$ both sides are $0$, since $W_0(m)$ is the zero subdistribution.
+For $n+1$, suppose first $\bexpr(m)$. Then
+\[
+  \begin{aligned}
+  &\mathbb E_{r\sim W_{n+1}(m)}\bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-loop-functional}}{=}
+  \mathbb E_{r\sim\mathrm{dlet}_{\mathrm{RM}}\ m'\leftarrow\llbracket C\rrbracket(m)\
+  \mathrm{in}\ W_n(m')}\bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\qquad\overset{\eqref{eq:lj-dlet-exp}}{=}
+  \mathbb E_{r\sim\llbracket C\rrbracket(m)}
+  \Bigl[\Bigl(E;\ \mathsf{Ok}\mapsto\lambda m'.\
+  \mathbb E_{s\sim W_n(m')}\bigl[(E;\mathsf{Ok}\mapsto g)(s)\bigr]\Bigr)(r)\Bigr]\\
+  &\qquad\overset{\text{IH}}{=}
+  \mathbb E_{r\sim\llbracket C\rrbracket(m)}
+  \bigl[(E;\mathsf{Ok}\mapsto X_n)(r)\bigr]\\
+  &\qquad\overset{\eqref{eq:ljwp-wp}}{=}
+  \mathrm{ewp}_{E}[C](X_n)(m)
+  =\Phi(X_n)(m)=X_{n+1}(m).
+  \end{aligned}
+\]
+If $\neg\bexpr(m)$, then $W_{n+1}(m)=\operatorname{return}(\mathsf{Ok}(m))$
+by \eqref{eq:lj-loop-functional}, and by \eqref{eq:lj-return} and
+\eqref{eq:ljwp-okmap} the left-hand side is $g(m)=\Phi(X_n)(m)=X_{n+1}(m)$.
+Now
+\[
+  \begin{aligned}
+  \mathrm{ewp}_{E}[\WHILE \bexpr\DO C](g)(m)
+  &\overset{\eqref{eq:ljwp-wp},\eqref{eq:lj-sem-while}}{=}
+  \mathbb E_{r\sim\sup_n W_n(m)}\bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\text{MC}}{=}
+  \sup_{n}\mathbb E_{r\sim W_n(m)}\bigl[(E;\mathsf{Ok}\mapsto g)(r)\bigr]\\
+  &\overset{\eqref{eq:lj-while-exp-n}}{=}
+  \sup_{n}X_n(m),
+  \end{aligned}
+\]
+where MC is monotone convergence: the $W_n(m)$ increase pointwise and the
+bracket is non-negative.
+
+\paragraph{Guard.}
+We first show, by induction on $n$, that for every $m$
+\begin{equation}
+  \bigl(\forall r\in\supp(W_n(m)).\ (G;\mathsf{Ok}\mapsto Q)(r)\bigr)
+  \iff Y_n(m).
+  \label{eq:lj-while-guard-n}
+\end{equation}
+For $n=0$ the support is empty, so both sides are true.
+For $n+1$, suppose first $\bexpr(m)$. Then
+\[
+  \begin{aligned}
+  &\forall r\in\supp(W_{n+1}(m)).\ (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\qquad\overset{\eqref{eq:lj-loop-functional}}{\iff}
+  \forall r\in\supp\bigl(\mathrm{dlet}_{\mathrm{RM}}\ m'\leftarrow\llbracket C\rrbracket(m)\
+  \mathrm{in}\ W_n(m')\bigr).\ (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\qquad\overset{\eqref{eq:lj-dlet-guard}}{\iff}
+  \forall r\in\supp(\llbracket C\rrbracket(m)).\
+  \Bigl(G;\ \mathsf{Ok}\mapsto\lambda m'.\
+  \forall s\in\supp(W_n(m')).\ (G;\mathsf{Ok}\mapsto Q)(s)\Bigr)(r)\\
+  &\qquad\overset{\text{IH}}{\iff}
+  \forall r\in\supp(\llbracket C\rrbracket(m)).\
+  (G;\mathsf{Ok}\mapsto Y_n)(r)\\
+  &\qquad\overset{\eqref{eq:ljwp-wpG}}{\iff}
+  \mathrm{wp}_{G}[C](Y_n)(m)
+  =\Psi(Y_n)(m)=Y_{n+1}(m).
+  \end{aligned}
+\]
+If $\neg\bexpr(m)$, then $W_{n+1}(m)=\operatorname{return}(\mathsf{Ok}(m))$,
+and by \eqref{eq:lj-return} and \eqref{eq:ljwp-okmap} the left-hand side
+is $Q(m)=\Psi(Y_n)(m)=Y_{n+1}(m)$.
+A supremum of an increasing sequence of non-negative numbers is positive
+iff some term is, so
+$\supp(\sup_n W_n(m))=\bigcup_n\supp(W_n(m))$. Hence
+\[
+  \begin{aligned}
+  \mathrm{wp}_{G}[\WHILE \bexpr\DO C](Q)(m)
+  &\overset{\eqref{eq:ljwp-wpG},\eqref{eq:lj-sem-while}}{\iff}
+  \forall n.\ \forall r\in\supp(W_n(m)).\ (G;\mathsf{Ok}\mapsto Q)(r)\\
+  &\overset{\eqref{eq:lj-while-guard-n}}{\iff}
+  \forall n.\ Y_n(m).
   \end{aligned}
 \]
 \end{proof}
