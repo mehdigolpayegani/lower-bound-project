@@ -186,11 +186,11 @@ the trapped mass --- to vanish in the limit.
   \small
     \[
       \Infer[hoare][while]
-      {\HT[lower]{\pred}{\ex}{\WHILE\bexpr\DO\cmd}{\neg\bexpr\land\pred}{\ex}}
+      {\HT[]{\pred}{\ex}{\WHILE\bexpr\DO\cmd}{\neg\bexpr\land\pred}{\ex}}
       {
-        \HT[lower]{\bexpr\land\pred}{\ex}{\cmd}{\pred}{\ex}
-        & \bexpr \land \pred \valid r_0 \geq \ex
-        & \forall i \geq 0.\, \HT[upper]{\bexpr\land\pred}{r_{i+1}}{\cmd}{\top}{r_i}
+        \HT[]{\bexpr\land\pred}{\ex}{\cmd}{\pred}{\ex}
+        & \bexpr \land \pred \valid \ex \rel r_0
+        & \forall i \geq 0.\, \HT[\neg\rel]{\bexpr\land\pred}{r_{i+1}}{\cmd}{\top}{r_i}
         & \bexpr \land \pred \valid \lim_{i \to \infty} r_i = 0
       }
     \]

@@ -236,7 +236,7 @@
 
 
 \newcommandx{\HTrel}[1][1=]{%
-  \ifthenelse{\equal{#1}{upper}}{\geq}{\ifthenelse{\equal{#1}{lower}}{\leq}{\rel}}%
+  \ifthenelse{\equal{#1}{upper}}{\geq}{\ifthenelse{\equal{#1}{lower}}{\leq}{\ifthenelse{\equal{#1}{}}{\rel}{#1}}}%
 }
 
 % \newcommandx{\HT}[6][1=]{
