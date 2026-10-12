@@ -302,17 +302,30 @@ functional
   \end{cases} 
   \label{eq:cook-denote-loop-functional}
 \end{equation}
-Then
+Starting from the zero function and applying $\mathcal F_{B,D}$ repeatedly
+gives the approximations
+\[
+  W_0\defsym\lambda m.\,0,
+  \qquad
+  W_{n+1}\defsym\mathcal F_{B,D}(W_n),
+\]
+where $0$ is the zero subdistribution. Intuitively, $W_n(m)$ collects the
+runs from $m$ that terminate before the $(n+1)$-th evaluation of $B$. The
+$W_n(m)$ increase pointwise, and the loop is their limit:
 \begin{equation}
-  \llbracket\WHILE B\DO D\rrbracket
-  \defsym\operatorname{lfp}(\mathcal F_{B,D})
+  \llbracket\WHILE B\DO D\rrbracket(m)
+  \defsym\sup_{n}W_n(m).
   \label{eq:cook-denote-loop}
 \end{equation}
-in the pointwise order on subdistribution kernels.
 
+We use the convention $0\cdot\infty=0$ for non-negative extended-real
+expectations.
 For a subdistribution $\mu$ and a non-negative function $h$, write
-$\mathbb E_{x\sim\mu}[h(x)]\defsym\sum_{x\in\Mem}\mu(x)h(x)$ for its
-expectation. Two elementary laws, used repeatedly below, follow directly
+\begin{equation}
+  \mathbb E_{x\sim\mu}[h(x)]\defsym\sum_{x\in\Mem}\mu(x)h(x)
+  \label{eq:cook-expect-def}
+\end{equation}
+for its expectation. Two elementary laws, used repeatedly below, follow directly
 from the definitions of $\operatorname{return}$
 (\ref{eq:cook-return-def}) and $\operatorname{bind}$
 (\ref{eq:cook-bind-def}). The first is immediate, since
@@ -373,6 +386,98 @@ The identical-looking equations for the expectation case are
 \eqref{eq:cook-wp-skip} and \eqref{eq:cook-wp-seq} below; both pairs are
 instances of the same return/bind laws, one for each type of argument.
 
+\paragraph{The loop.}
+Fix a guard $B$, a body $D$ and an expectation $g:\Mem\to[0,\infty]$, and
+write $L\defsym\WHILE B\DO D$. Define
+\begin{equation}
+  I_n(m)\defsym\mathbb E_{m'\sim W_{n+1}(m)}[g(m')]
+  =\sum_{m'\in\Mem}W_{n+1}(m)(m')\cdot g(m'),
+  \label{eq:cook-loop-approx}
+\end{equation}
+the expected value of $g$ over the runs from $m$ that terminate after
+executing the body $D$ at most $n$ times. The following lemma characterises $I_n$
+without referring to $W_n$, and expresses $\WP{L}{g}$ as their limit.
+
+\begin{lemma}[Loop]\label{lem:In-recursion}
+For every $n\geq0$,
+\[
+  I_0=[\neg B]\cdot g,
+  \qquad
+  I_{n+1}=[B]\cdot\WP{D}{I_n}+[\neg B]\cdot g,
+  \qquad
+  \WP{L}{g}=\sup_{n}I_n.
+\]
+\end{lemma}
+
+\begin{proof}
+Fix $m$. We compute $I_n(m)$ in three cases.
+
+\paragraph{Case $\neg B(m)$.}
+By \eqref{eq:cook-denote-loop-functional},
+$W_{n+1}(m)=\mathcal F_{B,D}(W_n)(m)=\operatorname{return}(m)$, hence
+\[
+  I_n(m)
+  =\mathbb E_{m'\sim\operatorname{return}(m)}[g(m')]
+  \overset{\eqref{eq:cook-expect-return}}{=}
+  g(m).
+\]
+
+\paragraph{Case $B(m)$, $n=0$.}
+By \eqref{eq:cook-denote-loop-functional},
+$W_1(m)=\mathcal F_{B,D}(W_0)(m)
+ =\operatorname{bind}(\llbracket D\rrbracket(m),W_0)$. Since $W_0(m'')$ is
+the zero subdistribution for every $m''$, \eqref{eq:cook-bind-def} gives, for
+every $m'$,
+\[
+  W_1(m)(m')
+  =\sum_{m''\in\supp(\llbracket D\rrbracket(m))}
+    \llbracket D\rrbracket(m)(m'')\cdot\underbrace{W_0(m'')(m')}_{=\,0}
+  =0.
+\]
+So $W_1(m)$ is the zero subdistribution, and
+$I_0(m)=\sum_{m'}0\cdot g(m')=0$.
+
+\paragraph{Case $B(m)$, $n+1$.}
+By \eqref{eq:cook-denote-loop-functional},
+$W_{n+2}(m)=\operatorname{bind}(\llbracket D\rrbracket(m),W_{n+1})$, hence
+\[
+  \begin{aligned}
+  I_{n+1}(m)
+  &=\mathbb E_{m'\sim\operatorname{bind}(\llbracket D\rrbracket(m),W_{n+1})}[g(m')]\\
+  &\overset{\eqref{eq:cook-expect-bind}}{=}
+  \mathbb E_{m''\sim\llbracket D\rrbracket(m)}
+  \Bigl[\mathbb E_{m'\sim W_{n+1}(m'')}[g(m')]\Bigr]
+  =\mathbb E_{m''\sim\llbracket D\rrbracket(m)}[I_n(m'')]
+  \overset{\eqref{eq:cook-wp-definition}}{=}
+  \WP{D}{I_n}(m).
+  \end{aligned}
+\]
+The three cases together give the formulas for $I_0$ and $I_{n+1}$.
+
+\paragraph{The limit.}
+\[
+  \begin{aligned}
+  \WP{L}{g}(m)
+  &\overset{\eqref{eq:cook-wp-definition}}{=}
+  \mathbb E_{m'\sim\llbracket L\rrbracket(m)}[g(m')]
+  \overset{\eqref{eq:cook-expect-def}}{=}
+  \sum_{m'}\llbracket L\rrbracket(m)(m')\cdot g(m')\\
+  &\overset{\eqref{eq:cook-denote-loop}}{=}
+  \sum_{m'}\Bigl(\sup_n W_n(m)(m')\Bigr)\cdot g(m')
+  \overset{\text{MC}}{=}
+  \sup_n\sum_{m'}W_n(m)(m')\cdot g(m')\\
+  &\overset{\eqref{eq:cook-expect-def}}{=}
+  \sup_n\mathbb E_{m'\sim W_n(m)}[g(m')]
+  =\sup_n I_n(m).
+  \end{aligned}
+\]
+Here MC is monotone convergence: by \eqref{eq:cook-denote-loop} the
+$W_n(m)(m')$ increase with $n$, and all terms are non-negative, so the
+supremum can be taken term by term. The last equality holds because
+$\mathbb E_{m'\sim W_0(m)}[g(m')]=0$ and
+$\mathbb E_{m'\sim W_{n+1}(m)}[g(m')]=I_n(m)$ by definition of $I_n$.
+\end{proof}
+
 \paragraph{Semantic validity versus syntactic derivability.}
 For $\bowtie\in\{\leq,=,\geq\}$, semantic validity of a guarded judgment is
 \begin{equation}
@@ -395,187 +500,164 @@ rules.
 
 \subsection{Soundness of the While Rule}\label{app:while-soundness}
 
+Throughout this subsection, $L\defsym\WHILE\bexpr\DO\cmd$, and $W_n$ denotes
+the approximations of \eqref{eq:cook-denote-loop} for the guard $\bexpr$ and
+the body $\cmd$.
+
 \paragraph{Goal.}
-We want to show that the \textsc{While-lb} rule of \Cref{fig:hoare:while-lb}
-is sound, i.e.\ that its conclusion
-$\HT[lower]{\pred}{\ex}{\WHILE\bexpr\DO\cmd}{\neg\bexpr\land\pred}{\ex}$ is
-valid. Its postcondition is $\neg\bexpr\land\pred$, so by validity
-Condition~(2) the indicator $[\pred\land\neg\bexpr]$ below is exactly the
-postcondition indicator applied to $\ex$; we keep it explicit because it is
-manipulated directly throughout the proof:
-\[
-  [\pred] \cdot \ex
-  \leq
-  \WP{\WHILE\bexpr\DO\cmd}{[\pred \wedge \neg\bexpr] \cdot \ex}
-\]
-
-\paragraph{Definitions.}
-Define the family of approximating programs:
-\[
-  W_n
-  \;\defsym\;
-  \bigl(\kwd{if}\ \bexpr\ \kwd{then}\ \cmd\bigr)^n
-  \mathbin{;}
-  \kwd{if}\ \bexpr\ \kwd{then}\ \ABORT
-\]
-where $W_n$ allows at most $n$ iterations; if the loop would continue beyond $n$,
-it aborts. Define:
-\[
-  I_n \;\defsym\; \WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}
-\]
-
-% ----------------------------------------------------------------------
-\begin{lemma}[Recursive characterisation of $I_n$]\label{lem:In-recursion}
-\[
-  I_0 \;=\; [\pred \wedge \neg\bexpr] \cdot \ex
+We show that the \textsc{While-lb} rule of \Cref{fig:hoare:while-lb} is
+sound. By \eqref{eq:cook-validity-typed}, validity of its conclusion
+$\HT[lower]{\pred}{\ex}{L}{\neg\bexpr\land\pred}{\ex}$ means that for every
+memory $m$ with $\pred(m)$,
+\begin{equation}
+  \text{(G)}\quad \WP{L}{\neg\bexpr\land\pred}(m)
   \qquad\text{and}\qquad
-  I_{n+1}
-  \;=\; [\bexpr] \cdot \WP{\cmd}{I_n}
-        + [\pred \wedge \neg\bexpr] \cdot \ex
+  \text{(N)}\quad \ex(m)\leq\WP{L}{\ex}(m).
+  \label{eq:while-goal}
+\end{equation}
+Unfolding \eqref{eq:cook-validity-typed} in the same way, the four premises
+say that for every memory $m$ with $\bexpr(m)\land\pred(m)$:
+\begin{align}
+  &\WP{\cmd}{\pred}(m)\ \text{ and }\ \ex(m)\leq\WP{\cmd}{\ex}(m),
+  &&\text{(Premise 1)}
+  \label{eq:while-p1}\\
+  &\ex(m)\leq r_0(m),
+  &&\text{(Premise 2)}
+  \label{eq:while-p2}\\
+  &r_{i+1}(m)\geq\WP{\cmd}{r_i}(m)\ \text{ for every } i,
+  &&\text{(Premise 3)}
+  \label{eq:while-p3}\\
+  &\lim_{i\to\infty}r_i(m)=0.
+  &&\text{(Premise 4)}
+  \label{eq:while-p4}
+\end{align}
+The qualitative part of Premise~3 is trivial, since its postcondition is
+$\top$.
+
+\paragraph{Two properties of $\mathsf{wp}$.}
+Both follow from \eqref{eq:cook-wp-definition}, since $\WP{\cmd}{h}(m)$ is a
+sum of non-negative terms over $\supp(\llbracket\cmd\rrbracket(m))$.
+\begin{itemize}
+  \item \emph{Linearity}:
+    $\WP{\cmd}{h+h'}=\WP{\cmd}{h}+\WP{\cmd}{h'}$.
+  \item \emph{Monotonicity on $\pred$}: if $\WP{\cmd}{\pred}(m)$ holds and
+    $h(m'')\leq h'(m'')$ for every $m''$ with $\pred(m'')$, then
+    $\WP{\cmd}{h}(m)\leq\WP{\cmd}{h'}(m)$, because every
+    $m''\in\supp(\llbracket\cmd\rrbracket(m))$ satisfies $\pred$.
+\end{itemize}
+
+\paragraph{Approximations of the expected value.}
+Let $I_n$ be the approximations \eqref{eq:cook-loop-approx} for the guard
+$\bexpr$, the body $\cmd$ and the expectation $g\defsym\ex$. By
+\Cref{lem:In-recursion},
+\[
+  I_0=[\neg\bexpr]\cdot\ex,
+  \qquad
+  I_{n+1}=[\bexpr]\cdot\WP{\cmd}{I_n}+[\neg\bexpr]\cdot\ex,
+  \qquad
+  \WP{L}{\ex}=\sup_{n}I_n.
 \]
+
+\paragraph{The guard condition (G).}
+
+\begin{lemma}[Final memories]\label{lem:while-guard}
+For every $n\geq0$ and every $m$ with $\pred(m)$, every
+$m'\in\supp(W_n(m))$ satisfies $\neg\bexpr(m')\land\pred(m')$.
 \end{lemma}
 
 \begin{proof}
-By induction on $n$.
+By induction on $n$, for all $m$ simultaneously.
 
-\paragraph{Base case $n=0$.}
-\begin{align*}
-  I_0
-  &= \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex} \\
-  &= [\bexpr] \cdot \WP{\ABORT}{[\pred \wedge \neg\bexpr] \cdot \ex}
-     + [\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] \cdot \ex \\
-  &= [\bexpr] \cdot 0 + [\pred \wedge \neg\bexpr] \cdot \ex
-   \;=\; [\pred \wedge \neg\bexpr] \cdot \ex
-\end{align*}
-where we used $\WP{\ABORT}{\cdot} = 0$ and
-$[\neg\bexpr] \cdot [\pred \wedge \neg\bexpr] = [\pred \wedge \neg\bexpr]$.
+\paragraph{Case $n=0$.}
+$W_0(m)$ is the zero subdistribution, so $\supp(W_0(m))=\emptyset$.
 
-\paragraph{Inductive step $n \to n+1$.}
-Since $(\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^{n+1}
- = \kwd{if}\ \bexpr\ \kwd{then}\ \cmd
-   \mathbin{;} (\kwd{if}\ \bexpr\ \kwd{then}\ \cmd)^n$, we have
-$W_{n+1} = (\kwd{if}\ \bexpr\ \kwd{then}\ \cmd) \mathbin{;} W_n$, so:
-\begin{align*}
-  I_{n+1}
-  &= \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{\WP{W_n}{[\pred \wedge \neg\bexpr] \cdot \ex}} \\
-  &= \WP{\kwd{if}\ \bexpr\ \kwd{then}\ \cmd}{I_n} \\
-  &= [\bexpr] \cdot \WP{\cmd}{I_n} + [\neg\bexpr] \cdot I_n
-\end{align*}
-It remains to identify $[\neg\bexpr] \cdot I_n$. When $\neg\bexpr$ already
-holds at the starting memory, none of the guard checks inside $W_n$ ever
-fire, so the memory is left untouched and $I_n$ reduces directly to
-$[\pred \wedge \neg\bexpr] \cdot \ex$:
+\paragraph{Case $n+1$, $\neg\bexpr(m)$.}
+$W_{n+1}(m)=\operatorname{return}(m)=\delta_m$, so
+$\supp(W_{n+1}(m))=\{m\}$, and $m$ satisfies $\neg\bexpr$ and, by
+assumption, $\pred$.
+
+\paragraph{Case $n+1$, $\bexpr(m)$.}
+$W_{n+1}(m)=\operatorname{bind}(\llbracket\cmd\rrbracket(m),W_n)$. Let
+$m'\in\supp(W_{n+1}(m))$. By \eqref{eq:cook-bind-def},
 \[
-  [\neg\bexpr] \cdot I_n
-  \;=\; [\pred \wedge \neg\bexpr] \cdot \ex.
+  0<W_{n+1}(m)(m')
+  =\sum_{m''\in\supp(\llbracket\cmd\rrbracket(m))}
+    \llbracket\cmd\rrbracket(m)(m'')\cdot W_n(m'')(m').
 \]
-Therefore:
-\[
-  I_{n+1}
-  \;=\; [\bexpr] \cdot \WP{\cmd}{I_n} + [\pred \wedge \neg\bexpr] \cdot \ex
-\]
+A sum of non-negative terms is positive only if some term is, so there is an
+$m''\in\supp(\llbracket\cmd\rrbracket(m))$ with $W_n(m'')(m')>0$, that is,
+$m'\in\supp(W_n(m''))$. Since $\bexpr(m)\land\pred(m)$, Premise~1 gives
+$\WP{\cmd}{\pred}(m)$, so $\pred(m'')$ by \eqref{eq:cook-gwp-definition}.
+The induction hypothesis at $m''$ then gives
+$\neg\bexpr(m')\land\pred(m')$.
 \end{proof}
 
-% ----------------------------------------------------------------------
+\noindent\emph{Proof of (G).}
+Fix $m$ with $\pred(m)$, and let $m'\in\supp(\llbracket L\rrbracket(m))$. By
+\eqref{eq:cook-denote-loop}, $\sup_n W_n(m)(m')>0$, so $W_n(m)(m')>0$ for
+some $n$, i.e.\ $m'\in\supp(W_n(m))$. By \Cref{lem:while-guard},
+$\neg\bexpr(m')\land\pred(m')$. As $m'$ was arbitrary,
+\eqref{eq:cook-gwp-definition} gives $\WP{L}{\neg\bexpr\land\pred}(m)$.
+
+\paragraph{The numerical condition (N).}
 
 \begin{lemma}[Key inequality]\label{lem:key-ineq}
-Assuming premises \textnormal{(a)}, \textnormal{(b)}, \textnormal{(c)},
-for all $n \geq 0$:
+For every $n\geq0$ and every $m$ with $\pred(m)$,
 \[
-  [\pred] \cdot I_n + [\pred] \cdot r_n \;\geq\; [\pred] \cdot \ex
+  \ex(m)\;\leq\;I_n(m)+r_n(m).
 \]
 \end{lemma}
 
 \begin{proof}
-By induction on $n$.
+By induction on $n$, for all $m$ simultaneously. Fix $m$ with $\pred(m)$.
 
-\paragraph{Base case $n = 0$.}
+\paragraph{Case $\neg\bexpr(m)$, any $n$.}
+By \Cref{lem:In-recursion}, $I_n(m)=\ex(m)$, so
+$\ex(m)=I_n(m)\leq I_n(m)+r_n(m)$.
+
+\paragraph{Case $\bexpr(m)$, $n=0$.}
+By \Cref{lem:In-recursion}, $I_0(m)=0$, and by Premise~2,
 \[
-  [\pred] \cdot I_0 + [\pred] \cdot r_0
-  \;=\; [\pred \wedge \neg\bexpr] \cdot \ex + [\pred] \cdot r_0
-\]
-By premise~(b), $[\pred] \cdot r_0 \geq [\pred \wedge \bexpr] \cdot \ex$, so:
-\[
-  \;\geq\; [\pred \wedge \neg\bexpr] \cdot \ex + [\pred \wedge \bexpr] \cdot \ex
-  \;=\; [\pred] \cdot \ex
+  \ex(m)\leq r_0(m)=I_0(m)+r_0(m).
 \]
 
-\paragraph{Inductive step $n \to n+1$.}
-Expanding $I_{n+1}$ by \Cref{lem:In-recursion} and multiplying by $[\pred]$:
-\begin{align*}
-  [\pred] \cdot I_{n+1} + [\pred] \cdot r_{n+1}
-  &= [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n}
-     + [\pred \wedge \neg\bexpr] \cdot \ex
-     + [\pred] \cdot r_{n+1}
-\end{align*}
-Premise~(c) gives $[\pred \wedge \bexpr] \cdot r_{n+1} \geq \WP{\cmd}{r_n}$. Multiplying by
-$[\pred]$ (using $[\pred]\cdot[\pred\wedge\bexpr] = [\pred\wedge\bexpr]$):
+\paragraph{Case $\bexpr(m)$, $n+1$.}
+By Premise~1, $\WP{\cmd}{\pred}(m)$ and $\ex(m)\leq\WP{\cmd}{\ex}(m)$. By the
+induction hypothesis, $\ex(m'')\leq I_n(m'')+r_n(m'')$ for every $m''$ with
+$\pred(m'')$. Hence
 \[
-  [\pred \wedge \bexpr] \cdot r_{n+1} \;\geq\; [\pred] \cdot \WP{\cmd}{r_n}
-\]
-Since $r_n \geq [\pred]\cdot r_n$ pointwise ($r_n$ is non-negative), monotonicity of $\WP{\cmd}{\cdot}$
-gives $\WP{\cmd}{r_n} \geq \WP{\cmd}{[\pred]\cdot r_n}$, hence
-$[\pred]\cdot\WP{\cmd}{r_n} \geq [\pred\wedge\bexpr]\cdot\WP{\cmd}{[\pred]\cdot r_n}$. Combining, and
-extending from $[\pred\wedge\bexpr]$ to $[\pred]$ using non-negativity of $r_{n+1}$ on the
-$[\pred\wedge\neg\bexpr]$ part:
-\[
-  [\pred] \cdot r_{n+1} \;\geq\; [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}
-\]
-Substituting into the expansion of $[\pred]\cdot I_{n+1}+[\pred]\cdot r_{n+1}$ above:
-\begin{align*}
-  [\pred] \cdot I_{n+1} + [\pred] \cdot r_{n+1}
-  &\geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n}
-        + [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot r_n}
-        + [\pred \wedge \neg\bexpr] \cdot \ex
-\end{align*}
-By linearity of $\WP{\cmd}{\cdot}$:
-\begin{align*}
-  &= [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n + [\pred] \cdot r_n}
-     + [\pred \wedge \neg\bexpr] \cdot \ex
-\end{align*}
-Since $I_n \geq [\pred]\cdot I_n$ pointwise ($I_n$ is non-negative), monotonicity of $\WP{\cmd}{\cdot}$
-gives:
-\[
-  [\pred \wedge \bexpr] \cdot \WP{\cmd}{I_n + [\pred] \cdot r_n}
-  \;\geq\; [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred]\cdot I_n + [\pred] \cdot r_n}
-\]
-By the induction hypothesis
-$[\pred] \cdot I_n + [\pred] \cdot r_n \geq [\pred] \cdot \ex$
-and monotonicity of $\WP{\cmd}{\cdot}$:
-\begin{align*}
-  &\geq [\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot \ex}
-        + [\pred \wedge \neg\bexpr] \cdot \ex
-\end{align*}
-By premise~(a), validity Condition~(2) gives
-$[\pred \wedge \bexpr] \cdot \WP{\cmd}{[\pred] \cdot \ex} \geq [\pred \wedge \bexpr] \cdot \ex$:
-\[
-  \;\geq\; [\pred \wedge \bexpr] \cdot \ex + [\pred \wedge \neg\bexpr] \cdot \ex
-  \;=\; [\pred] \cdot \ex
+  \begin{aligned}
+  \ex(m)
+  &\leq\WP{\cmd}{\ex}(m)
+  &&\text{by Premise~1}\\
+  &\leq\WP{\cmd}{I_n+r_n}(m)
+  &&\text{by monotonicity on $\pred$ and the induction hypothesis}\\
+  &=\WP{\cmd}{I_n}(m)+\WP{\cmd}{r_n}(m)
+  &&\text{by linearity}\\
+  &=I_{n+1}(m)+\WP{\cmd}{r_n}(m)
+  &&\text{by \Cref{lem:In-recursion}, since $\bexpr(m)$}\\
+  &\leq I_{n+1}(m)+r_{n+1}(m)
+  &&\text{by Premise~3.}
+  \end{aligned}
 \]
 \end{proof}
 
-% ----------------------------------------------------------------------
-\paragraph{Main result.}
-From \Cref{lem:key-ineq}, for all $n \geq 0$:
+\noindent\emph{Proof of (N).}
+Fix $m$ with $\pred(m)$.
+If $\neg\bexpr(m)$, then by \Cref{lem:In-recursion}
 \[
-  [\pred] \cdot I_n + [\pred] \cdot r_n \;\geq\; [\pred] \cdot \ex
+  \ex(m)=I_0(m)\leq\sup_n I_n(m)=\WP{L}{\ex}(m).
 \]
-Taking the limit:
+If $\bexpr(m)$, then for every $n$, \Cref{lem:key-ineq} and
+$I_n(m)\leq\sup_k I_k(m)=\WP{L}{\ex}(m)$ give
 \[
-  \lim_n ([\pred] \cdot I_n) + \lim_n ([\pred] \cdot r_n) \;\geq\; [\pred] \cdot \ex
+  \ex(m)\;\leq\;I_n(m)+r_n(m)\;\leq\;\WP{L}{\ex}(m)+r_n(m).
 \]
-By condition~(d), $\lim_n r_n = 0$, so $\lim_n ([\pred] \cdot r_n) = 0$:
-\[
-  \lim_n ([\pred] \cdot I_n) \;\geq\; [\pred] \cdot \ex
-\]
-By definition and \Cref{lem:In-recursion},
-$\lim_n I_n = \WP{\WHILE\bexpr\DO\cmd}{[\pred \wedge \neg\bexpr] \cdot \ex}$,
-giving:
-\[
-  \WP{\WHILE\bexpr\DO\cmd}{[\pred \wedge \neg\bexpr] \cdot \ex}
-  \;\geq\; [\pred] \cdot \ex
-\]
-which is exactly the desired conclusion. \qed
+By Premise~4, $r_n(m)\to0$ as $n\to\infty$, so
+$\ex(m)\leq\WP{L}{\ex}(m)$.
+
+Together, (G) and (N) establish \eqref{eq:while-goal} for every $m$ with
+$\pred(m)$, so the conclusion of \textsc{While-lb} is valid.
 
 \subsection{Completeness via Exact Pre-Expectations}\label{app:completeness-cook}
 
