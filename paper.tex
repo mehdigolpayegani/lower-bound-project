@@ -190,7 +190,7 @@ the trapped mass --- to vanish in the limit.
       {
         \HT[]{\bexpr\land\pred}{\ex}{\cmd}{\pred}{\ex}
         & \bexpr \land \pred \valid \ex \rel r_0
-        & \forall i \geq 0.\, \HT[\neg\rel]{\bexpr\land\pred}{r_{i+1}}{\cmd}{\top}{r_i}
+        & \forall i \geq 0.\, \HT[\rel^{-1}]{\bexpr\land\pred}{r_{i+1}}{\cmd}{\top}{r_i}
         & \bexpr \land \pred \valid \lim_{i \to \infty} r_i = 0
       }
     \]
@@ -398,7 +398,7 @@ the expected value of $g$ over the runs from $m$ that terminate after
 executing the body $D$ at most $n$ times. The following lemma characterises $I_n$
 without referring to $W_n$, and expresses $\WP{L}{g}$ as their limit.
 
-\begin{lemma}[Loop]\label{lem:In-recursion}
+\begin{lemma}[Loop]\label[lemma]{lem:In-recursion}
 For every $n\geq0$,
 \[
   I_0=[\neg B]\cdot g,
@@ -560,7 +560,7 @@ $\bexpr$, the body $\cmd$ and the expectation $g\defsym\ex$. By
 
 \paragraph{The guard condition (G).}
 
-\begin{lemma}[Final memories]\label{lem:while-guard}
+\begin{lemma}[Final memories]\label[lemma]{lem:while-guard}
 For every $n\geq0$ and every $m$ with $\pred(m)$, every
 $m'\in\supp(W_n(m))$ satisfies $\neg\bexpr(m')\land\pred(m')$.
 \end{lemma}
@@ -601,7 +601,7 @@ $\neg\bexpr(m')\land\pred(m')$. As $m'$ was arbitrary,
 
 \paragraph{The numerical condition (N).}
 
-\begin{lemma}[Key inequality]\label{lem:key-ineq}
+\begin{lemma}[Key inequality]\label[lemma]{lem:key-ineq}
 For every $n\geq0$ and every $m$ with $\pred(m)$,
 \[
   \ex(m)\;\leq\;I_n(m)+r_n(m).
@@ -924,7 +924,7 @@ $\operatorname{bind}(\mu,K)$ iff, for every outcome $r$ of $\mu$, it holds
 for every outcome of $K(r)$, which is the second line of
 \eqref{eq:lj-bind}.
 
-\begin{lemma}[$\mathrm{dlet}_{\mathrm{RM}}$]\label{lem:lj-dlet}
+\begin{lemma}[$\mathrm{dlet}_{\mathrm{RM}}$]\label[lemma]{lem:lj-dlet}
 For all $E,G$, $g:\mathsf{Exp}$, $Q:\mathsf{Pred}$,
 $\mu:\mathcal D_{\leq1}(\mathsf{Res}\ \Mem)$ and
 $k:\Mem\to\mathcal D_{\leq1}(\mathsf{Res}\ \Mem)$:
@@ -1030,7 +1030,7 @@ If $r=\mathsf{Jump}(\ell,m')$:
 
 \subsection{Basic Equations}\label{app:lj-equations}
 
-\begin{lemma}[Basic equations]\label{lem:ljwp-equations}
+\begin{lemma}[Basic equations]\label[lemma]{lem:ljwp-equations}
 For all $E,G,g,Q$, memories $m$, commands $C,D,C_1,C_2$, labels $\ell$,
 Boolean expressions $\bexpr$ and distribution expressions $\sexpr$:
 \begin{align}
@@ -1457,7 +1457,7 @@ If $r=\mathsf{Jump}(\ell',m')$ with $\ell'\neq\ell$:
 \end{proof}
 
 \paragraph{While.}
-\begin{lemma}[Loop]\label{lem:ljwp-while}
+\begin{lemma}[Loop]\label[lemma]{lem:ljwp-while}
 For $\bexpr$, $C$, $E$, $G$, $g$ and $Q$, define
 $\Phi:\mathsf{Exp}\to\mathsf{Exp}$ and $\Psi:\mathsf{Pred}\to\mathsf{Pred}$ by
 \[
